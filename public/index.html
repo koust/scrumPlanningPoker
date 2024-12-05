@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planning Poker</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 0; margin: 0; display: flex; background-color: #fff;}
+        #mainContent, .side-panel { display: none; } /* Başlangıçta gizli */
+        #mainContent { flex: 1; text-align: center; padding: 20px; }
+        .table { position: relative; width: 300px; height: 300px; margin: 20px auto; border: 2px solid #000; border-radius: 50%; overflow: hidden; background-image: url("logo.svg"); background-repeat: initial; background-color: #ffc201;}
+        .chair { position: absolute; width: 80px; height: 50px; background: #f0f0f0; border: 2px solid #ccc; border-radius: 5px; text-align: center; line-height: 50px; font-size: 14px; font-weight: bold; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+        .card { display: inline-block; margin: 10px; padding: 20px; background: #f0f0f0; border: 1px solid #ccc; cursor: pointer; border-radius: 5px; }
+        .selected-card { background-color: yellow; font-weight: bold; }
+        .side-panel { width: 300px; border-left: 2px solid #ccc; padding: 0px 0 0 0; overflow-y: auto; height: 100vh; display: none; flex-direction: column; }
+        .user-list { flex: 1; margin-bottom: 20px; }
+        .chat { flex: 1; display: contents; flex-direction: column; }
+        .chat-messages { flex: 1; overflow-y: scroll; border: 1px solid #ccc; padding: 5px; margin-bottom: 10px; height: 200px; }
+        .chat-input { display: flex; }
+        .chat-input input { flex: 1; padding: 5px; border: 1px solid #ccc; }
+        .chat-input button { padding: 5px 10px; border: 1px solid #ccc; background: #007bff; color: #fff; cursor: pointer; }
+        .chat-input button:hover { background: #0056b3; }
+        #average { margin-top: 20px; font-size: 20px; font-weight: bold; }
+        #nameInput { margin: 0 auto;}
+        #nameInput img{ margin-top:50px;}
+    </style>
+</head>
+<body>
+    <div id="nameInput">
+        <img src="./logo.svg" alt="">
+        <h1>Planning Poker</h1>
+        <label for="userName">Enter Your Name:</label>
+        <input type="text" id="userName" placeholder="Your name"><br><br>
+        <label for="room">Enter Room Name:</label>
+        <input type="text" id="room" placeholder="Room name"><br><br>
+        <button id="joinRoom">Join Room</button>
+    </div>
+
+    <div id="mainContent">
+        <img src="./logo.svg" alt="">
+        <div class="table" id="table">
+            <!-- Users will be dynamically placed around the table -->
+        </div>
+
+        <div id="controls">
+            <button id="revealVotes">Reveal Votes</button>
+            <button id="clearVotes">Clear Votes</button>
+        </div>
+
+        <div id="average">Average: Hidden</div>
+
+
+        <div id="cards">
+            <h3>Pick Your Vote:</h3>
+            <!-- Fibonacci Sequence Cards -->
+            <div class="card" data-value="1">1</div>
+            <div class="card" data-value="2">2</div>
+            <div class="card" data-value="3">3</div>
+            <div class="card" data-value="5">5</div>
+            <div class="card" data-value="8">8</div>
+            <div class="card" data-value="13">13</div>
+            <div class="card" data-value="21">21</div>
+        </div>
+    </div>
+
+    <div class="side-panel">
+        <div class="user-list" id="userList">
+            <h3>Users in Room:</h3>
+        </div>
+        <div class="chat">
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input">
+                <input type="text" id="chatInput" placeholder="Type a message...">
+                <button id="sendChat">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io(); // Connect to server
+        let currentRoom = null;
+
+        // Join room with user name
+        let userRegistered = false;
+
+document.getElementById('joinRoom').addEventListener('click', () => {
+    const userName = document.getElementById('userName').value.trim();
+    const room = document.getElementById('room').value.trim();
+
+    if (userName && room) {
+        currentRoom = room;
+        socket.emit('registerUser', { room, userName }); // Notify server
+        document.getElementById('nameInput').style.display = 'none';
+        document.getElementById('mainContent').style.display = 'block';
+        document.querySelector('.side-panel').style.display = 'flex';
+        userRegistered = true;
+    }
+});
+
+// Oy kullanmadan önce kullanıcı kaydını kontrol edin
+document.querySelectorAll('.card').forEach(card => {
+    card.addEventListener('click', () => {
+        if (!userRegistered) {
+            alert('You must join a room first.');
+            return;
+        }
+
+        const value = card.getAttribute('data-value');
+        socket.emit('vote', { room: currentRoom, vote: value });
+
+        // Highlight selected card
+        document.querySelectorAll('.card').forEach(c => c.classList.remove('selected-card'));
+        card.classList.add('selected-card');
+    });
+});
+
+        // Reveal votes
+        document.getElementById('revealVotes').addEventListener('click', () => {
+            if (currentRoom) {
+                socket.emit('revealVotes', currentRoom);
+            }
+        });
+
+        // Clear votes
+        document.getElementById('clearVotes').addEventListener('click', () => {
+            if (currentRoom) {
+                socket.emit('clearVotes', currentRoom);
+
+                // Reset UI
+                document.querySelectorAll('.card').forEach(c => c.classList.remove('selected-card'));
+                document.getElementById('average').innerText = 'Average: Hidden';
+            }
+        });
+
+        socket.on('userListUpdate', (users) => {
+            const userList = document.getElementById('userList');
+            const table = document.getElementById('table');
+
+            userList.innerHTML = '<h3>Users in Room:</h3>';
+            table.innerHTML = '';
+
+            const angleStep = (2 * Math.PI) / users.length;
+
+            users.forEach((user, index) => {
+                const angle = index * angleStep;
+                const x = 150 + 120 * Math.cos(angle) - 40; // Masa merkezi 150px, yarıçap 120px
+                const y = 150 + 120 * Math.sin(angle) - 25;
+
+                // Kullanıcıyı masa etrafında göster
+                const chair = document.createElement('div');
+                chair.className = 'chair';
+                chair.style.left = `${x}px`;
+                chair.style.top = `${y}px`;
+                chair.innerText = user.name.substring(0, 5); // Kullanıcının ilk 5 harfi
+                table.appendChild(chair);
+
+                console.log(users)
+                // Kullanıcı listesini güncelle
+                const listItem = document.createElement('p');
+                listItem.innerText = `${user.name} (${user.vote ? 'Voted' : 'Not Voted'})`;
+                userList.appendChild(listItem);
+            });
+        });
+
+        socket.on('updateVotes', ({ votes, average, revealed }) => {
+            const table = document.getElementById('table');
+            const averageDisplay = document.getElementById('average');
+
+            if (revealed) {
+                averageDisplay.innerText = `Average: ${average}`;
+                votes.forEach((user, index) => {
+                    const chair = table.children[index];
+                    if(user.vote) {
+                        if (chair) chair.innerText = `${user.vote} - ${user.name.substring(0, 5)}`;
+                    }
+                });
+            } else {
+                document.querySelectorAll('.card').forEach(c => c.classList.remove('selected-card'));
+                averageDisplay.innerText = 'Average: Hidden';
+                Array.from(table.children).forEach(chair => {
+                    chair.innerText = chair.innerText.split('\n')[0]; // Sadece ismi göster
+                });
+            }
+        });
+
+        // Chat functionality
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const sendChat = document.getElementById('sendChat');
+
+        sendChat.addEventListener('click', () => {
+            const message = chatInput.value.trim();
+            if (message && currentRoom) {
+                socket.emit('chatMessage', { room: currentRoom, message });
+                chatInput.value = '';
+            }
+        });
+
+        socket.on('chatMessage', ({ user, message }) => {
+            const messageElement = document.createElement('p');
+            messageElement.innerHTML = `<strong>${user}:</strong> ${message}`;
+            chatMessages.appendChild(messageElement);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+    </script>
+</body>
+</html>
