@@ -108,6 +108,6 @@ io.on('connection', (socket) => {
 // Serve static files (frontend)
 app.use(express.static('public'));
 
-server.listen(4000, () => {
-    console.log('Server is running on http://localhost:4000');
-});
+//server.listen(4000, () => {
+  //  console.log('Server is running on http://localhost:4000');
+//});
