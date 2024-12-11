@@ -66,7 +66,7 @@
             box-shadow: 0 0 5px rgba(0, 123, 255, 0.5); /* Odaklandığında mavi gölge */
         }
 
-        #updateUsernameButton, #revealVotes, #clearVotes {
+        #updateUsernameButton, #revealVotes, #clearVotes, #toggleSound {
             padding: 10px 20px;
             font-size: 16px;
             font-weight: bold;
@@ -100,7 +100,8 @@
     </div>
 
     <div id="mainContent">
-        <div id="roomInfo" style="margin-bottom: 10px; font-weight: bold;"></div>
+        <div id="roomInfo" style="margin-bottom: 10px; font-weight: bold;"></div><br>
+        <button id="toggleSound">Sound On/Off</button><br><br><br>
         <img src="./logo.svg" alt="">
         <div class="table" id="table">
             <!-- Users will be dynamically placed around the table -->
@@ -327,13 +328,17 @@
             const message = chatInput.value.trim();
             if (message && currentRoom) {
                 socket.emit('chatMessage', { room: currentRoom, message });
+                if (soundEnabled) {
                 messageSentSound.play();
+                }
                 chatInput.value = ''; // Input'u temizle
             }
         }
 
         socket.on('chatMessage', ({ user, message }) => {
-            messageReceivedSound.play();
+            if (soundEnabled) {
+                messageReceivedSound.play();
+            }
             const messageElement = document.createElement('p');
             messageElement.innerHTML = `<strong>${user}:</strong> ${message}`;
             chatMessages.appendChild(messageElement);
@@ -353,6 +358,15 @@
             socket.connect();
         }
         });
+
+        let soundEnabled = true;
+
+        // Ses açma/kapatma
+        document.getElementById('toggleSound').addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            document.getElementById('toggleSound').style.backgroundColor = soundEnabled ? '#007bff' : 'red';
+        });
+
 
         socket.on('disconnect', () => {
             console.log('Disconnected from the server.');
