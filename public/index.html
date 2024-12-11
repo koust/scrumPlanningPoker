@@ -11,7 +11,7 @@
         body { font-family: Arial, sans-serif; padding: 0; margin: 0; display: flex; background-color: #fff;}
         #mainContent, .side-panel { display: none; } /* Başlangıçta gizli */
         #mainContent { flex: 1; text-align: center; padding: 20px; }
-        .table { position: relative; width: 500px; height: 500px; margin: 20px auto; border: 2px solid #000; border-radius: 50%; overflow: hidden;  background-color: #15421c;}
+        .table { position: relative; width: 500px; height: 500px; margin: 20px auto; border: 2px solid #000; border-radius: 50%; overflow: hidden;  background-color: #15421c; background-image: url('./logo.svg'); background-position: center; background-repeat: no-repeat;}
         .chair { position: absolute; width: 80px; height: 50px; background: white; border: 2px solid #ccc; border-radius: 5px; text-align: center; line-height: 50px; font-size: 14px; font-weight: bold; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
         .card { display: inline-block; margin: 10px; padding: 20px; background: white; border: 1px solid #ccc; cursor: pointer; border-radius: 5px; }
         .selected-card { background-color: yellow; font-weight: bold; }
@@ -102,7 +102,6 @@
     <div id="mainContent">
         <div id="roomInfo" style="margin-bottom: 10px; font-weight: bold;"></div><br>
         <button id="toggleSound">Sound On/Off</button><br><br><br>
-        <img src="./logo.svg" alt="">
         <div class="table" id="table">
             <!-- Users will be dynamically placed around the table -->
         </div>
