@@ -169,6 +169,7 @@
         reconnectionDelay: 2000,      // Yeniden bağlanma denemeleri arasındaki bekleme süresi (ms)
         });
         let currentRoom = null;
+        let currentUsername = null;
 
         // Join room with user name
         let userRegistered = false;
@@ -182,6 +183,7 @@
         if (roomFromURL) {
             let userName = `User${Math.floor(Math.random() * 1000)}`; // Varsayılan kullanıcı adı
             currentRoom = roomFromURL;
+            currentUsername = userName;
             socket.emit('registerUser', { room: currentRoom, userName }); // Kullanıcıyı odaya kaydet
 
             document.getElementById('nameInput').style.display = 'none';
@@ -202,6 +204,7 @@
             const userName = document.getElementById('userName').value.trim();
             const room = document.getElementById('room').value.trim();
 
+            currentUsername = userName;
             if (userName && room) {
                 currentRoom = room;
                 socket.emit('registerUser', { room, userName }); // Notify server
@@ -337,7 +340,9 @@
 
         socket.on('chatMessage', ({ user, message }) => {
             if (soundEnabled) {
-                messageReceivedSound.play();
+                if(user != currentUsername){
+                    messageReceivedSound.play();
+                }
             }
             const messageElement = document.createElement('p');
             messageElement.innerHTML = `<strong>${user}:</strong> ${message}`;
