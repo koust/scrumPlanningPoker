@@ -27,10 +27,16 @@ io.on('connection', (socket) => {
         rooms[room][socket.id] = { name: userName, vote: null };
         io.to(room).emit('userListUpdate', Object.values(rooms[room]).map(user => ({
             name: user.name,
-            hasVoted: user.vote !== null
+            hasVoted: user.vote !== null,
+            vote: user.vote
         })));
         io.to(room).emit('chatMessage', { user: 'System', message: `${userName} joined the room.` });
     
+    });
+
+
+    socket.on('heartbeat', () => {
+        console.log('Heartbeat alındı:', socket.id);
     });
 
     // Listen for a vote
@@ -62,6 +68,21 @@ io.on('connection', (socket) => {
                 average,
                 revealed: true
             });
+
+            io.to(room).emit('chatMessage', { user: 'System', message: `The result will be deleted after 5 seconds.` });
+            setTimeout(() => {
+                if (rooms[room]) {
+                    Object.values(rooms[room]).forEach(user => user.vote = null); // Clear all votes
+                    revealed[room] = false; // Reset reveal status
+                    io.to(room).emit('userListUpdate', Object.values(rooms[room]).map(user => ({
+                        name: user.name,
+                        hasVoted: user.vote !== null,
+                        vote: null
+                    })));
+                    io.to(room).emit('updateVotes', { votes: Object.values(rooms[room]), average: 0, revealed: false });
+                    io.to(room).emit('chatMessage', { user: 'System', message: `Voting has been restarted.` });
+                }
+            }, 5000); // 5 saniye
         }
     });
 
@@ -72,7 +93,8 @@ io.on('connection', (socket) => {
             revealed[room] = false; // Reset reveal status
             io.to(room).emit('userListUpdate', Object.values(rooms[room]).map(user => ({
                 name: user.name,
-                hasVoted: user.vote !== null
+                hasVoted: user.vote !== null,
+                vote: null
             })));
             io.to(room).emit('updateVotes', { votes: Object.values(rooms[room]), average: 0, revealed: false });
         }
@@ -89,6 +111,23 @@ io.on('connection', (socket) => {
 
         chatMessages[room].push(chatMessage); // Store chat message
         io.to(room).emit('chatMessage', chatMessage); // Broadcast chat message
+    });
+
+    // Kullanıcı adı güncelleme
+    socket.on('updateUsername', ({ room, newUsername }) => {
+        if (rooms[room] && rooms[room][socket.id]) {
+            const oldUsername = rooms[room][socket.id].name;
+            rooms[room][socket.id].name = newUsername;
+
+            // Kullanıcı listesi ve mesajları güncelle
+            io.to(room).emit('userListUpdate', Object.values(rooms[room]).map(user => ({
+                name: user.name,
+                hasVoted: user.vote !== null,
+                vote: user.vote
+            })));
+
+            io.to(room).emit('chatMessage', { user: 'System', message: `${oldUsername} is now ${newUsername}` });
+        }
     });
 
     // Handle user disconnect
@@ -109,5 +148,5 @@ io.on('connection', (socket) => {
 app.use(express.static('public'));
 
 server.listen(8080, () => {
-   console.log('Server is running on http://localhost:4000');
+   console.log('Server is running on http://localhost:8080');
 });

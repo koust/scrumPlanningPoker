@@ -4,12 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Forinvest | Planning Poker</title>
-    <script src="/socket.io/socket.io.js"></script>
+    <script src="/socket.io/socket.io.js"></script> 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/twemoji.min.js"></script>
+   
     <style>
         body { font-family: Arial, sans-serif; padding: 0; margin: 0; display: flex; background-color: #fff;}
         #mainContent, .side-panel { display: none; } /* Başlangıçta gizli */
         #mainContent { flex: 1; text-align: center; padding: 20px; }
-        .table { position: relative; width: 300px; height: 300px; margin: 20px auto; border: 2px solid #000; border-radius: 50%; overflow: hidden; background-image: url("logo.svg"); background-repeat: initial; background-color: #ffc201;}
+        .table { position: relative; width: 500px; height: 500px; margin: 20px auto; border: 2px solid #000; border-radius: 50%; overflow: hidden;  background-color: #15421c;}
         .chair { position: absolute; width: 80px; height: 50px; background: white; border: 2px solid #ccc; border-radius: 5px; text-align: center; line-height: 50px; font-size: 14px; font-weight: bold; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
         .card { display: inline-block; margin: 10px; padding: 20px; background: white; border: 1px solid #ccc; cursor: pointer; border-radius: 5px; }
         .selected-card { background-color: yellow; font-weight: bold; }
@@ -24,6 +26,66 @@
         #average { margin-top: 20px; font-size: 20px; font-weight: bold; }
         #nameInput { margin: 0 auto;}
         #nameInput img{ margin-top:50px;}
+        #emojiPicker {
+            display: none;
+            position: absolute;
+            bottom: 70px;
+            right: 20px;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .emoji {
+            font-size: 24px;
+            margin: 5px;
+            cursor: pointer;
+        }
+
+        #usernameUpdate {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px; /* Giriş alanı ve buton arasında boşluk */
+            margin-top: 50px;
+        }
+
+        #newUsernameInput {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: 200px; /* Giriş alanının genişliği */
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Hafif gölge efekti */
+        }
+
+        #newUsernameInput:focus {
+            outline: none;
+            border-color: #007bff; /* Odaklandığında mavi kenar */
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.5); /* Odaklandığında mavi gölge */
+        }
+
+        #updateUsernameButton, #revealVotes, #clearVotes {
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            background-color: #007bff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        #updateUsernameButton:hover {
+            background-color: #0056b3; /* Buton üzerine gelindiğinde koyu mavi */
+        }
+
+        #updateUsernameButton:active {
+            background-color: #003f7f; /* Tıklama sırasında daha koyu mavi */
+            transform: scale(0.98); /* Hafif küçültme efekti */
+        }
     </style>
 </head>
 <body>
@@ -38,6 +100,7 @@
     </div>
 
     <div id="mainContent">
+        <div id="roomInfo" style="margin-bottom: 10px; font-weight: bold;"></div>
         <img src="./logo.svg" alt="">
         <div class="table" id="table">
             <!-- Users will be dynamically placed around the table -->
@@ -65,6 +128,12 @@
             <div class="card" data-value="30">30</div>
             <div class="card" data-value="35">35</div>
             <div class="card" data-value="40">40</div>
+            <div class="card" data-value="0">☕️</div>
+        </div>
+
+        <div id="usernameUpdate" style="margin-top: 50px;">
+            <input type="text" id="newUsernameInput" placeholder="Enter new username...">
+            <button id="updateUsernameButton">Update Username</button>
         </div>
     </div>
 
@@ -76,48 +145,93 @@
             <div class="chat-messages" id="chatMessages"></div>
             <div class="chat-input">
                 <input type="text" id="chatInput" placeholder="Type a message...">
+                <button id="emojiButton">😀</button>
                 <button id="sendChat">Send</button>
+            </div>
+
+            <div id="emojiPicker">
+                <span class="emoji">😀</span>
+                <span class="emoji">😂</span>
+                <span class="emoji">😍</span>
+                <span class="emoji">👍</span>
+                <span class="emoji">🎉</span>
+                <span class="emoji">❤️</span>
             </div>
         </div>
     </div>
 
+    <script src="./index.js"></script>
     <script>
-        const socket = io(); // Connect to server
+        const socket = io({
+        reconnection: true,           // Yeniden bağlanmayı etkinleştir
+        reconnectionAttempts: 10,     // Maksimum yeniden bağlanma denemesi
+        reconnectionDelay: 2000,      // Yeniden bağlanma denemeleri arasındaki bekleme süresi (ms)
+        });
         let currentRoom = null;
 
         // Join room with user name
         let userRegistered = false;
 
-document.getElementById('joinRoom').addEventListener('click', () => {
-    const userName = document.getElementById('userName').value.trim();
-    const room = document.getElementById('room').value.trim();
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomFromURL = urlParams.get('room');
+        const roomInfo = document.getElementById('roomInfo');    
+        const chatMessages = document.getElementById('chatMessages');   
 
-    if (userName && room) {
-        currentRoom = room;
-        socket.emit('registerUser', { room, userName }); // Notify server
-        document.getElementById('nameInput').style.display = 'none';
-        document.getElementById('mainContent').style.display = 'block';
-        document.querySelector('.side-panel').style.display = 'flex';
-        userRegistered = true;
-    }
-});
+        // Eğer room parametresi varsa otomatik olarak o odaya bağlan
+        if (roomFromURL) {
+            let userName = `User${Math.floor(Math.random() * 1000)}`; // Varsayılan kullanıcı adı
+            currentRoom = roomFromURL;
+            socket.emit('registerUser', { room: currentRoom, userName }); // Kullanıcıyı odaya kaydet
 
-// Oy kullanmadan önce kullanıcı kaydını kontrol edin
-document.querySelectorAll('.card').forEach(card => {
-    card.addEventListener('click', () => {
-        if (!userRegistered) {
-            alert('You must join a room first.');
-            return;
+            document.getElementById('nameInput').style.display = 'none';
+             document.getElementById('mainContent').style.display = 'block';
+            document.querySelector('.side-panel').style.display = 'flex';
+            roomInfo.textContent = `Current Room: ${currentRoom}`;
+            userRegistered = true;
+
+
+            const messageElement = document.createElement('p');
+            messageElement.innerHTML = `<strong>System:</strong> Current Room: <strong>${currentRoom}</strong>`;
+            chatMessages.appendChild(messageElement);
         }
 
-        const value = card.getAttribute('data-value');
-        socket.emit('vote', { room: currentRoom, vote: value });
 
-        // Highlight selected card
-        document.querySelectorAll('.card').forEach(c => c.classList.remove('selected-card'));
-        card.classList.add('selected-card');
-    });
-});
+
+        document.getElementById('joinRoom').addEventListener('click', () => {
+            const userName = document.getElementById('userName').value.trim();
+            const room = document.getElementById('room').value.trim();
+
+            if (userName && room) {
+                currentRoom = room;
+                socket.emit('registerUser', { room, userName }); // Notify server
+                document.getElementById('nameInput').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+                document.querySelector('.side-panel').style.display = 'flex';
+                roomInfo.textContent = `Current Room: ${room}`;
+                userRegistered = true;
+
+                const messageElement = document.createElement('p');
+                messageElement.innerHTML = `<strong>System:</strong> Current Room: ${room}`;
+                chatMessages.appendChild(messageElement);
+            }
+        });
+
+        // Oy kullanmadan önce kullanıcı kaydını kontrol edin
+        document.querySelectorAll('.card').forEach(card => {
+            card.addEventListener('click', () => {
+                if (!userRegistered) {
+                    alert('You must join a room first.');
+                    return;
+                }
+
+                const value = card.getAttribute('data-value');
+                socket.emit('vote', { room: currentRoom, vote: value });
+
+                // Highlight selected card
+                document.querySelectorAll('.card').forEach(c => c.classList.remove('selected-card'));
+                card.classList.add('selected-card');
+            });
+        });
 
         // Reveal votes
         document.getElementById('revealVotes').addEventListener('click', () => {
@@ -145,25 +259,25 @@ document.querySelectorAll('.card').forEach(card => {
             table.innerHTML = '';
 
             const angleStep = (2 * Math.PI) / users.length;
-
             users.forEach((user, index) => {
                 const angle = index * angleStep;
-                const x = 150 + 120 * Math.cos(angle) - 40; // Masa merkezi 150px, yarıçap 120px
-                const y = 150 + 120 * Math.sin(angle) - 25;
+                const x = 250 + 200 * Math.cos(angle) - 40; // Masa merkezi 150px, yarıçap 120px
+                const y = 250 + 220 * Math.sin(angle) - 25;
 
                 // Kullanıcıyı masa etrafında göster
                 const chair = document.createElement('div');
                 chair.className = 'chair';
                 chair.style.left = `${x}px`;
                 chair.style.top = `${y}px`;
-                chair.style.backgroundColor = user.vote ? 'blue' : 'white';
-                chair.style.color = user.vote ? 'white' : 'black';
+                chair.style.backgroundColor = user.vote !== null ? 'blue' : 'white';
+                chair.style.color = user.vote !== null ? 'white' : 'black';
                 chair.innerText = user.name.substring(0, 5); // Kullanıcının ilk 5 harfi
                 table.appendChild(chair);
 
                 // Kullanıcı listesini güncelle
                 const listItem = document.createElement('p');
-                listItem.innerText = `${user.name} (${user.vote ? 'Voted' : 'Not Voted'})`;
+                console.log(user)
+                listItem.innerText = `${user.name} (${user.vote !== null ? `Voted` : 'Not Voted'})`;
                 userList.appendChild(listItem);
             });
         });
@@ -176,8 +290,12 @@ document.querySelectorAll('.card').forEach(card => {
                 averageDisplay.innerText = `Average: ${average}`;
                 votes.forEach((user, index) => {
                     const chair = table.children[index];
-                    if(user.vote) {
-                        if (chair) chair.innerText = `${user.vote} - ${user.name.substring(0, 5)}`;
+                    if(user.vote !== null) {
+                        if (user.vote === 0) {
+                            if (chair) chair.innerText = `☕️ - ${user.name.substring(0, 5)}`;
+                        }else {
+                            if (chair) chair.innerText = `${user.vote} - ${user.name.substring(0, 5)}`;
+                        }
                     }
                 });
             } else {
@@ -190,9 +308,8 @@ document.querySelectorAll('.card').forEach(card => {
         });
 
         // Chat functionality
-        const chatMessages = document.getElementById('chatMessages');
         const chatInput = document.getElementById('chatInput');
-        const sendChat = document.getElementById('sendChat');
+        // const sendChat = document.getElementById('sendChat');
 
         chatInput.addEventListener('keydown', (event) => {
             if (event.key === 'Enter') {
@@ -201,9 +318,9 @@ document.querySelectorAll('.card').forEach(card => {
         });
 
         // Buton tıklaması ile mesaj gönderme
-        sendChat.addEventListener('click', () => {
-            sendMessage(); // Mesaj gönderme fonksiyonunu çağır
-        });
+        // sendChat.addEventListener('click', () => {
+        //     sendMessage(); // Mesaj gönderme fonksiyonunu çağır
+        // });
 
         // Mesaj gönderme fonksiyonu
         function sendMessage() {
@@ -220,6 +337,27 @@ document.querySelectorAll('.card').forEach(card => {
             chatMessages.appendChild(messageElement);
             chatMessages.scrollTop = chatMessages.scrollHeight;
         });
+
+        function sendHeartbeat() {
+        if (document.hidden) {
+            // Sekme görünür değilse heartbeat gönder
+            socket.emit('heartbeat', { timestamp: Date.now() });
+        }
+        }
+
+        document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && !socket.connected) {
+            console.log('Sekme tekrar aktif, yeniden bağlanılıyor...');
+            socket.connect();
+        }
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Disconnected from the server.');
+            alert('Connection lost. Attempting to reconnect...');
+        });
+        // Düzenli heartbeat gönder
+        setInterval(sendHeartbeat, 10000);
     </script>
 </body>
 </html>
