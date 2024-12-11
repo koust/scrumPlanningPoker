@@ -2,6 +2,9 @@
 const sendButton = document.getElementById('sendChat');
 const messages = document.getElementById('messages');
 
+
+const messageSentSound = new Audio('/sounds/message-sent.wav');
+const messageReceivedSound = new Audio('/sounds/message-received.wav');
 // Twemoji'yi kullanarak metindeki emojileri işle
 function renderMessageWithEmojis(message) {
     return twemoji.parse(message); // Mesajdaki tüm emojileri Twemoji ile işleme
@@ -57,3 +60,4 @@ updateUsernameButton.addEventListener('click', () => {
         newUsernameInput.value = ''; // Giriş alanını temizle
     }
 });
+

@@ -327,11 +327,13 @@
             const message = chatInput.value.trim();
             if (message && currentRoom) {
                 socket.emit('chatMessage', { room: currentRoom, message });
+                messageSentSound.play();
                 chatInput.value = ''; // Input'u temizle
             }
         }
 
         socket.on('chatMessage', ({ user, message }) => {
+            messageReceivedSound.play();
             const messageElement = document.createElement('p');
             messageElement.innerHTML = `<strong>${user}:</strong> ${message}`;
             chatMessages.appendChild(messageElement);
