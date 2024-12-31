@@ -36,7 +36,7 @@ io.on('connection', (socket) => {
 
 
     socket.on('heartbeat', () => {
-        console.log('Heartbeat alındı:', socket.id);
+        // console.log('Heartbeat alındı:', socket.id);
     });
 
     // Listen for a vote
@@ -50,7 +50,7 @@ io.on('connection', (socket) => {
             return; // User must exist
         }
         rooms[room][socket.id].hasVoted = true 
-        rooms[room][socket.id].vote = parseInt(vote, 10); // Store vote
+        rooms[room][socket.id].vote = parseFloat(vote, 10); // Store vote
         console.log(`Vote received in room ${room} by ${rooms[room][socket.id].name}: ${vote}`);
         io.to(room).emit('userListUpdate', Object.values(rooms[room]));
     });
