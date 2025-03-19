@@ -6,117 +6,872 @@
     <title>Forinvest | Planning Poker</title>
     <script src="/socket.io/socket.io.js"></script> 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/twemoji.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
    
     <style>
-        body { font-family: Arial, sans-serif; padding: 0; margin: 0; display: flex; background-color: #fff;}
-        #mainContent, .side-panel { display: none; } /* Başlangıçta gizli */
-        #mainContent { flex: 1; text-align: center; padding: 20px; }
-        .table { position: relative; width: 500px; height: 500px; margin: 20px auto; border: 2px solid #000; border-radius: 50%; overflow: hidden;  background-color: #15421c; background-image: url('./logo.svg'); background-position: center; background-repeat: no-repeat;}
-        .chair { position: absolute; width: 80px; height: 50px; background: white; border: 2px solid #ccc; border-radius: 5px; text-align: center; line-height: 50px; font-size: 14px; font-weight: bold; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-        .card { display: inline-block; margin: 10px; padding: 20px; background: white; border: 1px solid #ccc; cursor: pointer; border-radius: 5px; }
-        .selected-card { background-color: yellow; font-weight: bold; }
-        .side-panel { width: 300px; border-left: 2px solid #ccc; padding: 0px 0 0 0; overflow-y: auto; height: 100vh; display: none; flex-direction: column; }
-        .user-list { flex: 1; margin-bottom: 20px; }
-        .chat { flex: 1; display: contents; flex-direction: column; }
-        .chat-messages { flex: 1; overflow-y: scroll; border: 1px solid #ccc; padding: 5px; margin-bottom: 10px; height: 200px; }
-        .chat-input { display: flex; }
-        .chat-input input { flex: 1; padding: 5px; border: 1px solid #ccc; }
-        .chat-input button { padding: 5px 10px; border: 1px solid #ccc; background: #007bff; color: #fff; cursor: pointer; }
-        .chat-input button:hover { background: #0056b3; }
-        #average { margin-top: 20px; font-size: 20px; font-weight: bold; }
-        #nameInput { margin: 0 auto;}
-        #nameInput img{ margin-top:50px;}
+        :root {
+            --primary-color: #4361ee;
+            --primary-dark: #3a56d4;
+            --primary-light: #a5b4fc;
+            --secondary-color: #2ec4b6;
+            --accent-color: #ff9f1c;
+            --text-dark: #212529;
+            --text-light: #f8f9fa;
+            --background-light: #f8f9fa;
+            --background-card: #ffffff;
+            --table-color: #0a5025;
+            --danger-color: #e63946;
+            --success-color: #06d6a0;
+            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --hover-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+            --border-radius: 8px;
+            --transition-speed: 0.3s;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body { 
+            font-family: 'Poppins', Arial, sans-serif; 
+            background-color: var(--background-light);
+            color: var(--text-dark);
+            min-height: 100vh;
+            display: flex;
+            overflow-x: hidden;
+        }
+
+        #mainContent, .side-panel { 
+            display: none; /* Başlangıçta gizli */
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        #mainContent { 
+            flex: 1; 
+            text-align: center; 
+            padding: 24px 24px 24px 120px; /* Sol tarafta kartlar için boşluk */
+            overflow-y: auto;
+            position: relative; /* Popup pozisyonlandırma için */
+        }
+
+        h1, h2, h3 {
+            margin: 16px 0;
+            color: var(--primary-color);
+        }
+
+        /* Giriş Ekranı */
+        #nameInput { 
+            margin: 50px auto;
+            max-width: 500px;
+            text-align: center;
+            background-color: var(--background-card);
+            padding: 32px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        #nameInput img { 
+            max-width: 150px;
+            margin: 0 auto 24px;
+            display: block;
+        }
+
+        #nameInput h1 {
+            margin-bottom: 30px;
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            margin: 8px 0 20px;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            font-size: 16px;
+            transition: all var(--transition-speed);
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+
+        label {
+            display: block;
+            text-align: left;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-light);
+            background-color: var(--primary-color);
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: all var(--transition-speed);
+        }
+
+        button:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: var(--hover-shadow);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        /* Oyun Masası */
+        #roomInfo {
+            font-size: 18px;
+            margin: 16px 0;
+            padding: 12px;
+            background-color: var(--primary-light);
+            border-radius: var(--border-radius);
+            display: inline-block;
+        }
+
+        .table { 
+            position: relative; 
+            width: 500px; 
+            height: 500px; 
+            margin: 30px auto; 
+            border-radius: 50%;
+            overflow: hidden;  
+            background-color: var(--table-color); 
+            background-image: url('./logo.svg'); 
+            background-position: center; 
+            background-repeat: no-repeat;
+            background-size: 150px 150px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            border: 8px solid #0c7a36;
+        }
+
+        .chair { 
+            position: absolute; 
+            width: 85px; 
+            height: 55px; 
+            background: white; 
+            border: 2px solid #ccc; 
+            border-radius: var(--border-radius); 
+            text-align: center; 
+            line-height: 55px; 
+            font-size: 14px; 
+            font-weight: 600;
+            overflow: hidden; 
+            white-space: nowrap; 
+            text-overflow: ellipsis;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: all var(--transition-speed);
+        }
+
+        /* Kontrol Butonları */
+        #controls {
+            margin: 30px 0;
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        #revealVotes, #clearVotes {
+            padding: 14px 28px;
+            font-size: 16px;
+            border-radius: var(--border-radius);
+        }
+
+        #revealVotes {
+            background-color: var(--secondary-color);
+        }
+
+        #revealVotes:hover {
+            background-color: #25a99d;
+        }
+
+        #clearVotes {
+            background-color: var(--danger-color);
+        }
+
+        #clearVotes:hover {
+            background-color: #d12f3d;
+        }
+        
+        #average {
+            margin: 20px 0;
+            padding: 16px;
+            font-size: 24px;
+            font-weight: 700;
+            background-color: var(--primary-light);
+            border-radius: var(--border-radius);
+            display: inline-block;
+            min-width: 250px;
+        }
+
+        /* Oylama Kartları */
+        #cards {
+            display: none; /* Başlangıçta gizli */
+            position: fixed;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            max-width: 100px;
+            max-height: 80vh; /* Ekranın %80'i kadar maksimum yükseklik */
+            text-align: center;
+            background-color: var(--background-card);
+            padding: 12px 10px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+            z-index: 10;
+            overflow-y: auto; /* İçerik taşarsa scroll göster */
+            scrollbar-width: thin; /* Firefox için ince scrollbar */
+        }
+
+        /* Webkit tarayıcılar için ince scrollbar */
+        #cards::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #cards::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        #cards::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 3px;
+        }
+
+        #cards::-webkit-scrollbar-thumb:hover {
+            background: #999;
+        }
+
+        #cards h3 {
+            margin-bottom: 15px;
+            color: var(--text-dark);
+            font-size: 14px;
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            text-align: center;
+            margin: 0 auto 12px;
+        }
+
+        .card-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            gap: 6px; /* Kart aralarındaki boşluğu azalt */
+        }
+
+        .card { 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 50px; /* Kart genişliğini küçült */
+            height: 65px; /* Kart yüksekliğini küçült */
+            margin: 0;
+            padding: 0;
+            background: white; 
+            border: 1px solid #e0e0e0; 
+            cursor: pointer; 
+            border-radius: var(--border-radius);
+            transition: all var(--transition-speed);
+            box-shadow: var(--card-shadow);
+            font-size: 16px; /* Font boyutunu küçült */
+            font-weight: 600;
+            flex-shrink: 0; /* Kartların küçülmesini engelle */
+        }
+
+        /* Kahve kartı için özel stil */
+        .card[data-value="0"] {
+            font-size: 20px; /* Emoji daha büyük olabilir */
+        }
+
+        .card:hover {
+            transform: translateX(8px) rotate(-3deg);
+            box-shadow: var(--hover-shadow);
+        }
+
+        .selected-card { 
+            background-color: var(--accent-color); 
+            color: white;
+            transform: translateX(8px);
+            box-shadow: var(--hover-shadow);
+        }
+
+        /* Kullanıcı Adı Güncelleme Popup */
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: none; /* Başlangıçta gizli */
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+            backdrop-filter: blur(3px);
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .popup-content {
+            background-color: var(--background-card);
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            position: relative;
+            animation: scaleIn 0.3s ease-out;
+        }
+
+        @keyframes scaleIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .popup-content h3 {
+            margin-top: 0;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+
+        .popup-close {
+            position: absolute;
+            right: 15px;
+            top: 15px;
+            font-size: 24px;
+            color: #999;
+            cursor: pointer;
+            transition: color 0.3s;
+            line-height: 1;
+        }
+
+        .popup-close:hover {
+            color: var(--danger-color);
+        }
+
+        #usernameUpdate {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin: 0;
+            padding: 0;
+            background-color: transparent;
+            box-shadow: none;
+        }
+
+        #newUsernameInput {
+            flex: 1;
+            max-width: 100%;
+        }
+
+        /* Yan Panel */
+        .side-panel { 
+            width: 350px; 
+            border-left: 1px solid #e0e0e0; 
+            background-color: var(--background-card);
+            height: 100vh; 
+            display: none; 
+            flex-direction: column;
+            box-shadow: -4px 0 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-list { 
+            padding: 20px;
+            background-color: #f5f5f5;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .user-list h3 {
+            margin-bottom: 16px;
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .user-list p {
+            padding: 10px;
+            margin: 5px 0;
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .chat { 
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .chat h3 {
+            margin-bottom: 16px;
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .chat-messages { 
+            flex: 1; 
+            overflow-y: auto; 
+            border: 1px solid #e0e0e0; 
+            border-radius: var(--border-radius);
+            background-color: white;
+            padding: 16px; 
+            margin-bottom: 16px; 
+            min-height: 300px;
+            max-height: 500px;
+        }
+
+        .chat-messages p {
+            margin: 8px 0;
+            padding: 10px;
+            border-radius: var(--border-radius);
+            background-color: #f5f5f5;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .chat-messages .system-message {
+            background-color: var(--primary-light);
+            color: var(--text-dark);
+        }
+
+        .chat-input { 
+            display: flex; 
+            gap: 8px;
+        }
+
+        .chat-input input { 
+            flex: 1; 
+            padding: 12px 16px;
+            border-radius: var(--border-radius);
+        }
+
+        .chat-input button { 
+            padding: 12px; 
+            border-radius: var(--border-radius);
+        }
+
+        #emojiButton {
+            width: 46px;
+            padding: 0;
+            font-size: 20px;
+        }
+
         #emojiPicker {
             display: none;
             position: absolute;
             bottom: 70px;
             right: 20px;
             background: #fff;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            padding: 10px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-        .emoji {
-            font-size: 24px;
-            margin: 5px;
-            cursor: pointer;
+            border: 1px solid #e0e0e0;
+            border-radius: var(--border-radius);
+            padding: 16px;
+            box-shadow: var(--card-shadow);
+            z-index: 100;
         }
 
-        #usernameUpdate {
+        .emoji {
+            font-size: 24px;
+            margin: 8px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .emoji:hover {
+            transform: scale(1.2);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1100px) {
+            body {
+                flex-direction: column;
+            }
+            
+            .side-panel {
+                width: 100%;
+                height: auto;
+                border-left: none;
+                border-top: 1px solid #e0e0e0;
+            }
+            
+            .chat-messages {
+                max-height: 300px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            #cards {
+                position: fixed;
+                left: 0;
+                top: auto;
+                bottom: 0;
+                transform: none;
+                width: 100%;
+                max-width: 100%;
+                max-height: none;
+                padding: 8px;
+                border-radius: var(--border-radius) var(--border-radius) 0 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 100;
+                overflow-y: hidden;
+                overflow-x: auto;
+            }
+            
+            #cards h3 {
+                writing-mode: horizontal-tb;
+                transform: none;
+                margin: 0 10px 0 0;
+                min-width: auto;
+                flex-shrink: 0;
+            }
+            
+            .card-container {
+                flex-direction: row;
+                overflow-x: auto;
+                padding: 5px;
+                margin: 0;
+                max-width: calc(100% - 100px);
+                gap: 8px;
+            }
+            
+            .card {
+                width: 45px;
+                height: 60px;
+                font-size: 14px;
+                flex-shrink: 0;
+            }
+            
+            .card:hover {
+                transform: translateY(-5px);
+            }
+            
+            .selected-card {
+                transform: translateY(-5px);
+            }
+            
+            #mainContent {
+                padding: 24px 24px 80px 24px;
+            }
+            
+            .table {
+                width: 350px;
+                height: 350px;
+            }
+            
+            #controls {
+                flex-direction: row;
+                align-items: center;
+            }
+            
+            #revealVotes, #clearVotes {
+                width: auto;
+            }
+            
+            .room-info-container {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            #changeNameBtn {
+                padding: 8px 12px;
+                font-size: 14px;
+            }
+            
+            .popup-content {
+                width: 85%;
+                padding: 20px;
+            }
+            
+            .top-controls {
+                flex-direction: column-reverse; /* Ses kontrolü üstte, isim değiştirme altta */
+                top: 15px;
+                right: 15px;
+                gap: 8px;
+            }
+            
+            #toggleSound {
+                width: 40px;
+                height: 40px;
+            }
+            
+            .btn-text {
+                display: none; /* Mobil görünümde butondaki yazıyı gizle, sadece ikon göster */
+            }
+        }
+
+        @media (max-width: 576px) {
+            .table {
+                width: 300px;
+                height: 300px;
+            }
+            
+            .chair {
+                width: 70px;
+                height: 45px;
+                line-height: 45px;
+                font-size: 12px;
+            }
+            
+            #cards h3 {
+                display: none;
+            }
+            
+            .card-container {
+                max-width: 100%;
+            }
+            
+            .card {
+                width: 40px;
+                height: 55px;
+                font-size: 12px;
+            }
+            
+            #usernameUpdate {
+                flex-direction: column;
+            }
+            
+            #newUsernameInput {
+                max-width: 100%;
+            }
+            
+            #controls {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+
+        @media (max-height: 700px) {
+            /* Kısa ekranlar için kartları daha da küçült */
+            .card {
+                width: 45px;
+                height: 55px;
+                font-size: 14px;
+            }
+            .card-container {
+                gap: 4px;
+            }
+        }
+
+        @media (max-height: 600px) {
+            /* Çok kısa ekranlar için daha da kompakt */
+            .card {
+                width: 40px;
+                height: 50px;
+                font-size: 12px;
+            }
+            #cards h3 {
+                font-size: 12px;
+                margin-bottom: 8px;
+            }
+        }
+
+        /* İsim Değiştirme Popup Stilleri */
+        .popup-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        .popup-content {
+            background-color: #fff;
+            padding: 25px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 400px;
+            position: relative;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            animation: scaleIn 0.3s ease-in-out;
+        }
+        
+        .popup-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #888;
+            transition: color 0.2s;
+        }
+        
+        .popup-close:hover {
+            color: #333;
+        }
+        
+        .popup-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 15px;
+        }
+        
+        .popup-form input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        .popup-form button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.2s;
+        }
+        
+        .popup-form button:hover {
+            background-color: #0056b3;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes scaleIn {
+            from { 
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to { 
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        .room-info-container {
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 10px; /* Giriş alanı ve buton arasında boşluk */
-            margin-top: 50px;
+            gap: 16px;
+            margin: 16px 0;
         }
 
-        #newUsernameInput {
+        #roomInfo {
+            font-size: 18px;
+            padding: 12px;
+            background-color: var(--primary-light);
+            border-radius: var(--border-radius);
+            display: inline-block;
+            margin: 0;
+        }
+
+        /* Üst kısımdaki kontrol butonları */
+        .top-controls {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            display: flex;
+            gap: 12px;
+            z-index: 90;
+        }
+
+        #toggleSound {
             padding: 10px;
+            font-size: 20px;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: var(--primary-color);
+        }
+
+        .btn-text {
             font-size: 16px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            width: 200px; /* Giriş alanının genişliği */
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Hafif gölge efekti */
-        }
-
-        #newUsernameInput:focus {
-            outline: none;
-            border-color: #007bff; /* Odaklandığında mavi kenar */
-            box-shadow: 0 0 5px rgba(0, 123, 255, 0.5); /* Odaklandığında mavi gölge */
-        }
-
-        #updateUsernameButton, #revealVotes, #clearVotes, #toggleSound {
-            padding: 10px 20px;
-            font-size: 16px;
-            font-weight: bold;
-            color: white;
-            background-color: #007bff;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-
-        #updateUsernameButton:hover {
-            background-color: #0056b3; /* Buton üzerine gelindiğinde koyu mavi */
-        }
-
-        #updateUsernameButton:active {
-            background-color: #003f7f; /* Tıklama sırasında daha koyu mavi */
-            transform: scale(0.98); /* Hafif küçültme efekti */
+            font-weight: 600;
         }
     </style>
 </head>
 <body>
     <div id="nameInput">
-        <img src="./logo.svg" alt="">
+        <img src="./logo.svg" alt="Forinvest Logo">
         <h1>Planning Poker</h1>
-        <label for="userName">Enter Your Name:</label>
-        <input type="text" id="userName" placeholder="Your name"><br><br>
-        <label for="room">Enter Room Name:</label>
-        <input type="text" id="room" placeholder="Room name"><br><br>
-        <button id="joinRoom">Join Room</button>
+        <label for="userName">Adınız:</label>
+        <input type="text" id="userName" placeholder="Adınızı girin">
+        
+        <label for="room">Oda Adı:</label>
+        <input type="text" id="room" placeholder="Oda adını girin">
+        
+        <button id="joinRoom">Odaya Katıl</button>
     </div>
 
     <div id="mainContent">
-        <div id="roomInfo" style="margin-bottom: 10px; font-weight: bold;"></div><br>
-        <button id="toggleSound">Sound On/Off</button><br><br><br>
-        <div class="table" id="table">
-            <!-- Users will be dynamically placed around the table -->
+        <!-- Sağ üst köşedeki kontrol butonları için container -->
+        <div class="top-controls">
+            <button id="changeNameBtn" title="Kullanıcı Adını Değiştir">
+                <i class="fas fa-user-edit"></i> <span class="btn-text">İsim Değiştir</span>
+            </button>
+            <button id="toggleSound" title="Sesi Aç/Kapat"><i class="fas fa-volume-up"></i></button>
         </div>
+        
+        <div class="room-info-container">
+            <div id="roomInfo"></div>
+        </div>
+        
+        <div class="table" id="table">
+            <!-- Kullanıcılar masa etrafında dinamik olarak yerleştirilecek -->
+        </div>
+
+        <div id="average">Ortalama: Gizli</div>
 
         <div id="controls">
-            <button id="revealVotes">Reveal Votes</button>
-            <button id="clearVotes">Clear Votes</button>
+            <button id="revealVotes">Oyları Göster</button>
+            <button id="clearVotes">Oyları Temizle</button>
         </div>
+    </div>
 
-        <div id="average">Average: Hidden</div>
+    <!-- İsim Değiştirme Popup -->
+    <div id="namePopup" class="popup-overlay">
+        <div class="popup-content">
+            <span class="popup-close">&times;</span>
+            <h3>Kullanıcı Adını Değiştir</h3>
+            <div class="popup-form">
+                <input type="text" id="newUsernameInput" placeholder="Yeni kullanıcı adı girin" />
+                <button id="updateUsernameButton" class="btn">Güncelle</button>
+            </div>
+        </div>
+    </div>
 
-
-        <div id="cards">
-            <h3>Pick Your Vote:</h3>
-            <!-- Fibonacci Sequence Cards -->
+    <div id="cards">
+        <h3>Oyunuzu Seçin</h3>
+        <div class="card-container">
+            <!-- Fibonacci Serisi Kartları -->
             <div class="card" data-value="0.5">0.5</div>
             <div class="card" data-value="1">1</div>
             <div class="card" data-value="2">2</div>
@@ -131,23 +886,19 @@
             <div class="card" data-value="40">40</div>
             <div class="card" data-value="0">☕️</div>
         </div>
-
-        <div id="usernameUpdate" style="margin-top: 50px;">
-            <input type="text" id="newUsernameInput" placeholder="Enter new username...">
-            <button id="updateUsernameButton">Update Username</button>
-        </div>
     </div>
 
     <div class="side-panel">
         <div class="user-list" id="userList">
-            <h3>Users in Room:</h3>
+            <h3>Odadaki Kullanıcılar:</h3>
         </div>
         <div class="chat">
+            <h3>Sohbet</h3>
             <div class="chat-messages" id="chatMessages"></div>
             <div class="chat-input">
-                <input type="text" id="chatInput" placeholder="Type a message...">
+                <input type="text" id="chatInput" placeholder="Bir mesaj yazın...">
                 <button id="emojiButton">😀</button>
-                <button id="sendChat">Send</button>
+                <button id="sendChat">Gönder</button>
             </div>
 
             <div id="emojiPicker">
@@ -157,228 +908,36 @@
                 <span class="emoji">👍</span>
                 <span class="emoji">🎉</span>
                 <span class="emoji">❤️</span>
+                <span class="emoji">👏</span>
+                <span class="emoji">🤔</span>
+                <span class="emoji">🚀</span>
+                <span class="emoji">💡</span>
+                <span class="emoji">⭐</span>
+                <span class="emoji">🔥</span>
             </div>
         </div>
     </div>
 
-    <script src="./index.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.4/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js"></script>
+    <script src="index.js"></script>
     <script>
-        const socket = io({
-        reconnection: true,           // Yeniden bağlanmayı etkinleştir
-        reconnectionAttempts: 10,     // Maksimum yeniden bağlanma denemesi
-        reconnectionDelay: 2000,      // Yeniden bağlanma denemeleri arasındaki bekleme süresi (ms)
-        });
-        let currentRoom = null;
-        let currentUsername = null;
-
-        // Join room with user name
-        let userRegistered = false;
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const roomFromURL = urlParams.get('room');
-        const roomInfo = document.getElementById('roomInfo');    
-        const chatMessages = document.getElementById('chatMessages');   
-
-        // Eğer room parametresi varsa otomatik olarak o odaya bağlan
-        if (roomFromURL) {
-            let userName = `User${Math.floor(Math.random() * 1000)}`; // Varsayılan kullanıcı adı
-            currentRoom = roomFromURL;
-            currentUsername = userName;
-            socket.emit('registerUser', { room: currentRoom, userName }); // Kullanıcıyı odaya kaydet
-
-            document.getElementById('nameInput').style.display = 'none';
-             document.getElementById('mainContent').style.display = 'block';
-            document.querySelector('.side-panel').style.display = 'flex';
-            roomInfo.textContent = `Current Room: ${currentRoom}`;
-            userRegistered = true;
-
-
-            const messageElement = document.createElement('p');
-            messageElement.innerHTML = `<strong>System:</strong> Current Room: <strong>${currentRoom}</strong>`;
-            chatMessages.appendChild(messageElement);
-        }
-
-
-
-        document.getElementById('joinRoom').addEventListener('click', () => {
-            const userName = document.getElementById('userName').value.trim();
-            const room = document.getElementById('room').value.trim();
-
-            currentUsername = userName;
-            if (userName && room) {
-                currentRoom = room;
-                socket.emit('registerUser', { room, userName }); // Notify server
-                document.getElementById('nameInput').style.display = 'none';
-                document.getElementById('mainContent').style.display = 'block';
-                document.querySelector('.side-panel').style.display = 'flex';
-                roomInfo.textContent = `Current Room: ${room}`;
-                userRegistered = true;
-
-                const messageElement = document.createElement('p');
-                messageElement.innerHTML = `<strong>System:</strong> Current Room: ${room}`;
-                chatMessages.appendChild(messageElement);
-            }
-        });
-
-        // Oy kullanmadan önce kullanıcı kaydını kontrol edin
-        document.querySelectorAll('.card').forEach(card => {
-            card.addEventListener('click', () => {
-                if (!userRegistered) {
-                    alert('You must join a room first.');
-                    return;
-                }
-
-                const value = card.getAttribute('data-value');
-                socket.emit('vote', { room: currentRoom, vote: value });
-
-                // Highlight selected card
-                document.querySelectorAll('.card').forEach(c => c.classList.remove('selected-card'));
-                card.classList.add('selected-card');
+        // Sadece HTML'e özel yardımcı fonksiyonlar
+        function formatTime(date) {
+            return date.toLocaleTimeString('tr-TR', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
             });
-        });
-
-        // Reveal votes
-        document.getElementById('revealVotes').addEventListener('click', () => {
-            if (currentRoom) {
-                socket.emit('revealVotes', currentRoom);
-            }
-        });
-
-        // Clear votes
-        document.getElementById('clearVotes').addEventListener('click', () => {
-            if (currentRoom) {
-                socket.emit('clearVotes', currentRoom);
-
-                // Reset UI
-                document.querySelectorAll('.card').forEach(c => c.classList.remove('selected-card'));
-                document.getElementById('average').innerText = 'Average: Hidden';
-            }
-        });
-
-        socket.on('userListUpdate', (users) => {
-            const userList = document.getElementById('userList');
-            const table = document.getElementById('table');
-
-            userList.innerHTML = '<h3>Users in Room:</h3>';
-            table.innerHTML = '';
-
-            const angleStep = (2 * Math.PI) / users.length;
-            users.forEach((user, index) => {
-                const angle = index * angleStep;
-                const x = 250 + 200 * Math.cos(angle) - 40; // Masa merkezi 150px, yarıçap 120px
-                const y = 250 + 220 * Math.sin(angle) - 25;
-
-                // Kullanıcıyı masa etrafında göster
-                const chair = document.createElement('div');
-                chair.className = 'chair';
-                chair.style.left = `${x}px`;
-                chair.style.top = `${y}px`;
-                chair.style.backgroundColor = user.vote !== null ? 'blue' : 'white';
-                chair.style.color = user.vote !== null ? 'white' : 'black';
-                chair.innerText = user.name.substring(0, 5); // Kullanıcının ilk 5 harfi
-                table.appendChild(chair);
-
-                // Kullanıcı listesini güncelle
-                const listItem = document.createElement('p');
-                console.log(user)
-                listItem.innerText = `${user.name} (${user.vote !== null ? `Voted` : 'Not Voted'})`;
-                userList.appendChild(listItem);
-            });
-        });
-
-        socket.on('updateVotes', ({ votes, average, revealed }) => {
-            const table = document.getElementById('table');
-            const averageDisplay = document.getElementById('average');
-
-            if (revealed) {
-                averageDisplay.innerText = `Average: ${average}`;
-                votes.forEach((user, index) => {
-                    const chair = table.children[index];
-                    if(user.vote !== null) {
-                        if (user.vote === 0) {
-                            if (chair) chair.innerText = `☕️ - ${user.name.substring(0, 5)}`;
-                        }else {
-                            if (chair) chair.innerText = `${user.vote} - ${user.name.substring(0, 5)}`;
-                        }
-                    }
-                });
-            } else {
-                document.querySelectorAll('.card').forEach(c => c.classList.remove('selected-card'));
-                averageDisplay.innerText = 'Average: Hidden';
-                Array.from(table.children).forEach(chair => {
-                    chair.innerText = chair.innerText.split('\n')[0]; // Sadece ismi göster
-                });
-            }
-        });
-
-        // Chat functionality
-        const chatInput = document.getElementById('chatInput');
-        // const sendChat = document.getElementById('sendChat');
-
-        chatInput.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                sendMessage(); // Mesaj gönderme fonksiyonunu çağır
-            }
-        });
-
-        // Buton tıklaması ile mesaj gönderme
-        // sendChat.addEventListener('click', () => {
-        //     sendMessage(); // Mesaj gönderme fonksiyonunu çağır
-        // });
-
-        // Mesaj gönderme fonksiyonu
-        function sendMessage() {
-            const message = chatInput.value.trim();
-            if (message && currentRoom) {
-                socket.emit('chatMessage', { room: currentRoom, message });
-                if (soundEnabled) {
-                messageSentSound.play();
-                }
-                chatInput.value = ''; // Input'u temizle
-            }
         }
 
-        socket.on('chatMessage', ({ user, message }) => {
-            if (soundEnabled) {
-                if(user != currentUsername){
-                    messageReceivedSound.play();
-                }
+        function getRandomColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
             }
-            const messageElement = document.createElement('p');
-            messageElement.innerHTML = `<strong>${user}:</strong> ${message}`;
-            chatMessages.appendChild(messageElement);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        });
-
-        function sendHeartbeat() {
-        if (document.hidden) {
-            // Sekme görünür değilse heartbeat gönder
-            socket.emit('heartbeat', { timestamp: Date.now() });
+            return color;
         }
-        }
-
-        document.addEventListener('visibilitychange', () => {
-        if (!document.hidden && !socket.connected) {
-            console.log('Sekme tekrar aktif, yeniden bağlanılıyor...');
-            socket.connect();
-        }
-        });
-
-        let soundEnabled = true;
-
-        // Ses açma/kapatma
-        document.getElementById('toggleSound').addEventListener('click', () => {
-            soundEnabled = !soundEnabled;
-            document.getElementById('toggleSound').style.backgroundColor = soundEnabled ? '#007bff' : 'red';
-        });
-
-
-        socket.on('disconnect', () => {
-            console.log('Disconnected from the server.');
-            alert('Connection lost. Attempting to reconnect...');
-        });
-        // Düzenli heartbeat gönder
-        setInterval(sendHeartbeat, 10000);
     </script>
 </body>
 </html>
