@@ -151,6 +151,17 @@
             display: inline-block;
         }
 
+        /* Masanın dönme (spin) animasyonu */
+        @keyframes tableSpin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .table-spin {
+            animation: tableSpin 1.5s ease-in-out forwards;
+            transform-origin: center center;
+        }
+
         .table { 
             position: relative; 
             width: 500px; 
@@ -165,6 +176,65 @@
             background-size: 150px 150px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
             border: 8px solid #0c7a36;
+            transition: all 0.3s ease; /* Genel geçişler için */
+        }
+
+        /* Sandalyelerin dönme durumunda animasyonu */
+        .chair-spin {
+            transition: transform 1.5s ease-in-out !important;
+            transform-origin: 250px 250px !important; /* Masanın merkezi */
+        }
+
+        /* Dönme animasyonu sırasında sandalyenin kendi pozisyonunu koruması */
+        .table-spin .chair {
+            animation-timing-function: ease-in-out;
+            animation-duration: 1.5s;
+            animation-fill-mode: forwards;
+            transform-origin: 250px 250px !important; /* Masanın merkezine göre dönme */
+        }
+
+        /* Her sandalye kendi açısına göre ters rotasyon alacak */
+        .table-spin .chair:nth-child(1) { animation-name: chairSpin1; }
+        .table-spin .chair:nth-child(2) { animation-name: chairSpin2; }
+        .table-spin .chair:nth-child(3) { animation-name: chairSpin3; }
+        .table-spin .chair:nth-child(4) { animation-name: chairSpin4; }
+        .table-spin .chair:nth-child(5) { animation-name: chairSpin5; }
+        .table-spin .chair:nth-child(6) { animation-name: chairSpin6; }
+        .table-spin .chair:nth-child(7) { animation-name: chairSpin7; }
+        .table-spin .chair:nth-child(8) { animation-name: chairSpin8; }
+
+        /* Sandalye rotation animasyonları - her biri sabit kalacak şekilde */
+        @keyframes chairSpin1 { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(-360deg); } 
+        }
+        @keyframes chairSpin2 { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(-360deg); } 
+        }
+        @keyframes chairSpin3 { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(-360deg); } 
+        }
+        @keyframes chairSpin4 { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(-360deg); } 
+        }
+        @keyframes chairSpin5 { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(-360deg); } 
+        }
+        @keyframes chairSpin6 { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(-360deg); } 
+        }
+        @keyframes chairSpin7 { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(-360deg); } 
+        }
+        @keyframes chairSpin8 { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(-360deg); } 
         }
 
         .chair { 
@@ -620,6 +690,12 @@
             .btn-text {
                 display: none; /* Mobil görünümde butondaki yazıyı gizle, sadece ikon göster */
             }
+            
+            .chat-bubble {
+                max-width: 100px;
+                font-size: 10px;
+                padding: 6px 8px;
+            }
         }
 
         @media (max-width: 576px) {
@@ -891,6 +967,129 @@
         #breakBtn:active {
             transform: translateY(0) rotate(0);
             background-color: #2f1513;
+        }
+
+        /* Sohbet Baloncuğu Stili */
+        .chat-bubble {
+            position: absolute;
+            background-color: white;
+            border-radius: 16px;
+            padding: 12px 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+            max-width: 200px;
+            width: auto;
+            min-width: 100px;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 150;
+            top: -60px;
+            left: 50%;
+            transform: translateX(-50%) scale(0.95);
+            text-align: center;
+            white-space: normal;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-out;
+            pointer-events: none;
+            color: #333;
+            border: 2px solid #e0e0e0;
+            line-height: 1.4;
+        }
+
+        /* Emoji boyutlarını ayarla */
+        .chat-bubble img.emoji {
+            height: 1.2em;
+            width: 1.2em;
+            margin: 0 0.05em 0 0.1em;
+            vertical-align: -0.1em;
+        }
+
+        .chat-bubble:after {
+            content: '';
+            position: absolute;
+            bottom: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 12px 12px 0;
+            border-style: solid;
+            border-color: white transparent transparent;
+            z-index: 3;
+        }
+
+        .chat-bubble:before {
+            content: '';
+            position: absolute;
+            bottom: -14px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 14px 14px 0;
+            border-style: solid;
+            border-color: #e0e0e0 transparent transparent;
+            z-index: 2;
+        }
+
+        .chat-bubble.show {
+            opacity: 1;
+            transform: translateX(-50%) scale(1);
+            animation: bubble-pop 0.3s ease-out;
+        }
+
+        @keyframes bubble-pop {
+            0% { transform: translateX(-50%) scale(0.8); }
+            50% { transform: translateX(-50%) scale(1.05); }
+            100% { transform: translateX(-50%) scale(1); }
+        }
+
+        /* Masada üst kenara yakın olan kullanıcılar için baloncuk pozisyonu düzeltme */
+        .chair:nth-child(1) .chat-bubble,
+        .chair:nth-child(2) .chat-bubble,
+        .chair:nth-child(3) .chat-bubble {
+            top: -50px; /* Üst kısımdaki sandalyeler için biraz daha yakın */
+        }
+
+        /* Masada alt kenara yakın olan kullanıcılar için baloncuk pozisyonu düzeltme */
+        .chair:nth-child(4) .chat-bubble,
+        .chair:nth-child(5) .chat-bubble,
+        .chair:nth-child(6) .chat-bubble {
+            top: -70px; /* Alt kısımdaki sandalyeler için biraz daha uzak */
+        }
+
+        @media (min-width: 769px) {
+            .chat-bubble {
+                max-width: 250px;
+            }
+            
+            .table {
+                position: relative;
+                width: 500px;
+                height: 500px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .chat-bubble {
+                max-width: 175px;
+                font-size: 12px;
+            }
+            
+            .table {
+                width: 350px;
+                height: 350px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .chat-bubble {
+                max-width: 150px;
+                font-size: 11px;
+                padding: 8px 12px;
+            }
+            
+            .table {
+                width: 300px;
+                height: 300px;
+            }
         }
     </style>
 </head>

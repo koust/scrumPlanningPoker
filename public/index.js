@@ -29,11 +29,152 @@ let currentUsername = null;
 let userRegistered = false;
 let soundEnabled = true;
 
-// Ses efektleri
-const messageSentSound = new Audio('https://cdn.pixabay.com/download/audio/2021/08/04/audio_c518b4a13d.mp3?filename=message-sent-126008.mp3');
-const messageReceivedSound = new Audio('https://cdn.pixabay.com/download/audio/2021/08/04/audio_47fee2df36.mp3?filename=notification-sound-127856.mp3');
-messageSentSound.volume = 0.3;
-messageReceivedSound.volume = 0.3;
+// Web Audio API ile basit sesler oluşturacak yardımcı fonksiyon
+function createAudioContext() {
+    try {
+        window.AudioContext = window.AudioContext || window.webkitAudioContext;
+        return new AudioContext();
+    } catch (e) {
+        console.warn("Web Audio API desteklenmiyor, sesler çalınmayacak");
+        return null;
+    }
+}
+
+// Ses açma/kapatma fonksiyonu
+function toggleSound() {
+    soundEnabled = !soundEnabled;
+    toggleSoundButton.innerHTML = soundEnabled ? 
+        '<i class="fas fa-volume-up"></i>' : 
+        '<i class="fas fa-volume-mute"></i>';
+    toggleSoundButton.style.backgroundColor = soundEnabled ? 
+        'var(--primary-color)' : 'var(--danger-color)';
+    
+    // Ses değişikliğini bildir
+    if (soundEnabled) {
+        playMessageSentSound(); // Kısa bir bildirim çal
+    }
+}
+
+// Basit ses efektleri tanımla (Web Audio API ile)
+function playMessageSentSound() {
+    if (!soundEnabled) return;
+    try {
+        const audioContext = createAudioContext();
+        if (!audioContext) return;
+        
+        // Kısa yüksek bir bip sesi
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.type = 'sine';
+        oscillator.frequency.value = 800;
+        gainNode.gain.value = 0.1;
+        
+        oscillator.start();
+        
+        setTimeout(() => {
+            oscillator.stop();
+        }, 100);
+    } catch (e) {
+        console.error("Ses çalma hatası:", e);
+    }
+}
+
+function playMessageReceivedSound() {
+    if (!soundEnabled) return;
+    try {
+        const audioContext = createAudioContext();
+        if (!audioContext) return;
+        
+        // İki tonlu bildirim sesi
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.type = 'sine';
+        oscillator.frequency.value = 700;
+        gainNode.gain.value = 0.1;
+        
+        oscillator.start();
+        
+        setTimeout(() => {
+            oscillator.frequency.value = 900;
+            setTimeout(() => {
+                oscillator.stop();
+            }, 100);
+        }, 100);
+    } catch (e) {
+        console.error("Ses çalma hatası:", e);
+    }
+}
+
+function playSpinSound() {
+    if (!soundEnabled) return;
+    try {
+        const audioContext = createAudioContext();
+        if (!audioContext) return;
+        
+        // Döndürme sesi - yükselen ton
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.type = 'sine';
+        oscillator.frequency.value = 300;
+        gainNode.gain.value = 0.1;
+        
+        oscillator.start();
+        
+        // Frekansı kademeli olarak artır
+        const startTime = audioContext.currentTime;
+        oscillator.frequency.setValueAtTime(300, startTime);
+        oscillator.frequency.linearRampToValueAtTime(800, startTime + 1.5);
+        
+        setTimeout(() => {
+            oscillator.stop();
+        }, 1500);
+    } catch (e) {
+        console.error("Ses çalma hatası:", e);
+    }
+}
+
+function playResultSound() {
+    if (!soundEnabled) return;
+    try {
+        const audioContext = createAudioContext();
+        if (!audioContext) return;
+        
+        // Başarı sesi - yukarı sonra aşağı inen ton
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.type = 'sine';
+        gainNode.gain.value = 0.1;
+        
+        const startTime = audioContext.currentTime;
+        oscillator.frequency.setValueAtTime(400, startTime);
+        oscillator.frequency.linearRampToValueAtTime(700, startTime + 0.2);
+        oscillator.frequency.linearRampToValueAtTime(600, startTime + 0.4);
+        
+        oscillator.start();
+        
+        setTimeout(() => {
+            oscillator.stop();
+        }, 400);
+    } catch (e) {
+        console.error("Ses çalma hatası:", e);
+    }
+}
 
 // Socket.io bağlantısı
 const socket = io({
@@ -219,7 +360,48 @@ function voteCard(card) {
 // Oyları gösterme fonksiyonu
 function revealVotes() {
     if (currentRoom) {
-        socket.emit('revealVotes', currentRoom);
+        // Masa elementini al
+        const tableElement = document.getElementById('table');
+        const chairs = document.querySelectorAll('.chair');
+        
+        // Eğer zaten dönüyorsa işlem yapma
+        if (tableElement.classList.contains('table-spin')) {
+            return;
+        }
+        
+        // Döndürme sesi çal
+        playSpinSound();
+        
+        // Spin efektini uygula
+        tableElement.classList.add('table-spin');
+        
+        // Masaya parlama efekti ekle
+        tableElement.style.boxShadow = '0 0 30px rgba(67, 97, 238, 0.8)';
+        
+        // Sandalyelere chair-spin sınıfı ekle
+        chairs.forEach(chair => {
+            chair.classList.add('chair-spin');
+        });
+        
+        // Animasyon bitiminde oyları göster (1.5 saniye sonra)
+        setTimeout(() => {
+            // İsteği sunucuya gönder
+            socket.emit('revealVotes', currentRoom);
+            
+            // Parlama efektini kaldır
+            tableElement.style.boxShadow = '';
+            
+            // Spin sınıflarını kaldır
+            setTimeout(() => {
+                tableElement.classList.remove('table-spin');
+                chairs.forEach(chair => {
+                    chair.classList.remove('chair-spin');
+                });
+                
+                // Sonuç gösterme sesi çal
+                playResultSound();
+            }, 500);
+        }, 1500);
     }
 }
 
@@ -282,20 +464,10 @@ function sendMessage() {
     if (message && currentRoom) {
         socket.emit('chatMessage', { room: currentRoom, message });
         if (soundEnabled) {
-            messageSentSound.play();
+            playMessageSentSound();
         }
         chatInput.value = '';
     }
-}
-
-// Ses açma/kapatma fonksiyonu
-function toggleSound() {
-    soundEnabled = !soundEnabled;
-    toggleSoundButton.innerHTML = soundEnabled ? 
-        '<i class="fas fa-volume-up"></i>' : 
-        '<i class="fas fa-volume-mute"></i>';
-    toggleSoundButton.style.backgroundColor = soundEnabled ? 
-        'var(--primary-color)' : 'var(--danger-color)';
 }
 
 // Sekme görünürlüğü değiştiğinde bağlantı kontrolü
@@ -343,7 +515,17 @@ socket.on('userListUpdate', (users) => {
 });
 
 socket.on('updateVotes', ({ votes, average, revealed }) => {
+    // Animasyon sırasında değerler değişeceği için setTimeout ile bekletelim
+    const isSpinning = document.getElementById('table').classList.contains('table-spin');
+    
+    // Dönen masa animasyonu varsa, animasyon bitene kadar bekle
+    if (isSpinning) {
+        console.log("Masa dönüyor, oyları daha sonra göster");
+        return; // Animasyon devam ederken update'i engelle, revealVotes zaten bunu işleyecek
+    }
+    
     if (revealed) {
+        // Oylar gösterilecek
         averageDisplay.innerText = `Ortalama: ${average}`;
         votes.forEach((user, index) => {
             const chair = table.children[index];
@@ -356,6 +538,7 @@ socket.on('updateVotes', ({ votes, average, revealed }) => {
             }
         });
     } else {
+        // Oylar gizlenecek
         document.querySelectorAll('.card').forEach(c => {
             c.classList.remove('selected-card');
             c.style.transform = ''; // Transform efektini temizle
@@ -367,14 +550,37 @@ socket.on('updateVotes', ({ votes, average, revealed }) => {
     }
 });
 
-socket.on('chatMessage', ({ user, message }) => {
-    if (soundEnabled) {
-        if(user != currentUsername){
-            messageReceivedSound.play();
+socket.on('chatMessage', (data) => {
+    console.log("Mesaj alındı:", data);
+    const messageElement = document.createElement('p');
+    const isSystemMessage = data.user === 'System';
+    
+    if (isSystemMessage) {
+        messageElement.classList.add('system-message');
+        messageElement.textContent = data.message;
+    } else {
+        messageElement.innerHTML = `<strong>${data.user}:</strong> ${data.message}`;
+        
+        // Debug için mevcut kullanıcı adını yazdır
+        console.log("Mevcut kullanıcı:", currentUsername);
+        console.log("Gönderen kullanıcı:", data.user);
+        
+        // Kendi mesajım değilse baloncuk göster
+        if (data.user && currentUsername && 
+            data.user !== currentUsername && 
+            data.user !== 'System') {
+            console.log("Baloncuk oluşturma koşulu doğru");
+            showMessageBubble(data.user, data.message);
+            
+            // Ses efektleri
+            if (soundEnabled) {
+                playMessageReceivedSound();
+            }
+        } else {
+            console.log("Bu kendi mesajım veya sistem mesajı, baloncuk gösterilmiyor");
         }
     }
-    const messageElement = document.createElement('p');
-    messageElement.innerHTML = `<strong>${user}:</strong> ${message}`;
+    
     chatMessages.appendChild(messageElement);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 });
@@ -446,5 +652,86 @@ function handleScreenSizeChange() {
             }, 100);
         }
     }
+}
+
+// Baloncuk mesajı gösterme fonksiyonu
+function showMessageBubble(userName, message) {
+    console.log("showMessageBubble çağrıldı", userName, message);
+    
+    // Masa üzerindeki kullanıcıyı bul
+    const chairs = document.querySelectorAll('.chair');
+    let userChair = null;
+    
+    // Debug için sandalyelerin içeriğini yazdır
+    console.log("Mevcut sandalyeler:");
+    chairs.forEach(chair => {
+        const chairText = chair.textContent.trim();
+        console.log("Sandalye içeriği:", chairText);
+        
+        // Sandalyedeki metin içinde "-" varsa, sadece kullanıcı adı kısmını al (örn: "5 - Kullanıcı" -> "Kullanıcı")
+        let chairUserName = chairText;
+        if (chairText.includes('-')) {
+            chairUserName = chairText.split('-')[1].trim();
+        }
+        
+        console.log("İşlenmiş sandalye içeriği:", chairUserName);
+        
+        // Kullanıcı adı karşılaştırması
+        if (chairUserName === userName || chairText === userName || chairText.includes(userName)) {
+            userChair = chair;
+            console.log("Kullanıcı sandalyesi bulundu:", chairText);
+        }
+    });
+    
+    if (!userChair) {
+        console.log("Kullanıcı sandalyesi bulunamadı! Kullanıcı adı:", userName);
+        return; // Kullanıcı masa üzerinde yoksa işlem yapma
+    }
+    
+    // Varsa eski baloncuğu kaldır
+    const existingBubble = userChair.querySelector('.chat-bubble');
+    if (existingBubble) {
+        console.log("Eski baloncuk kaldırılıyor");
+        userChair.removeChild(existingBubble);
+    }
+    
+    // Yeni baloncuk oluştur
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-bubble';
+    
+    // Mesajı kısalt (eğer çok uzunsa)
+    const maxLength = 50; // Daha uzun mesajlar gösterilsin
+    const displayMessage = message.length > maxLength ? 
+        message.substring(0, maxLength) + '...' : message;
+    
+    // Emoji desteği için twemoji kullan
+    bubble.innerHTML = twemoji.parse(displayMessage);
+    userChair.appendChild(bubble);
+    console.log("Baloncuk eklendi:", displayMessage);
+    
+    // Animasyon için sınıf ekle
+    setTimeout(() => {
+        bubble.classList.add('show');
+        console.log("Baloncuk show sınıfı eklendi");
+        
+        // Bir ses çal 
+        if (soundEnabled) {
+            playMessageReceivedSound();
+        }
+    }, 10);
+    
+    // Daha uzun süre görünsün (5 saniye)
+    setTimeout(() => {
+        if (bubble.parentNode === userChair) {
+            bubble.classList.remove('show');
+            console.log("Baloncuk gizleme başladı");
+            setTimeout(() => {
+                if (bubble.parentNode === userChair) {
+                    userChair.removeChild(bubble);
+                    console.log("Baloncuk kaldırıldı");
+                }
+            }, 500); // Gizlendikten sonra kaldırma süresi
+        }
+    }, 5000); // 5 saniye görünsün
 }
 
