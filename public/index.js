@@ -519,10 +519,7 @@ socket.on('updateVotes', ({ votes, average, revealed }) => {
     const isSpinning = document.getElementById('table').classList.contains('table-spin');
     
     // Dönen masa animasyonu varsa, animasyon bitene kadar bekle
-    if (isSpinning) {
-        console.log("Masa dönüyor, oyları daha sonra göster");
-        return; // Animasyon devam ederken update'i engelle, revealVotes zaten bunu işleyecek
-    }
+
     
     if (revealed) {
         // Oylar gösterilecek
