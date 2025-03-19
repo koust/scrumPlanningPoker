@@ -71,8 +71,11 @@ io.on('connection', (socket) => {
                 average,
                 revealed: true
             });
-
-            io.to(room).emit('chatMessage', { user: 'System', message: `The result will be deleted after 5 seconds.` });
+            
+            // Sohbete oyların açıklandığını bildir
+            io.to(room).emit('chatMessage', { user: 'System', message: `Oylar açıklandı!` });
+            
+            io.to(room).emit('chatMessage', { user: 'System', message: `Sonuçlar 5 saniye sonra silinecek.` });
             setTimeout(() => {
                 if (rooms[room]) {
                     Object.values(rooms[room]).forEach(user => user.vote = null); // Clear all votes
@@ -83,7 +86,7 @@ io.on('connection', (socket) => {
                         vote: null
                     })));
                     io.to(room).emit('updateVotes', { votes: Object.values(rooms[room]), average: 0, revealed: false });
-                    io.to(room).emit('chatMessage', { user: 'System', message: `Voting has been restarted.` });
+                    io.to(room).emit('chatMessage', { user: 'System', message: `Yeni oylama başlatıldı.` });
                 }
             }, 5000); // 5 saniye
         }
@@ -100,6 +103,9 @@ io.on('connection', (socket) => {
                 vote: null
             })));
             io.to(room).emit('updateVotes', { votes: Object.values(rooms[room]), average: 0, revealed: false });
+            
+            // Oyların temizlendiğine dair mesaj gönder
+            io.to(room).emit('chatMessage', { user: 'System', message: `Oylar sıfırlandı. Yeni oylama başlatıldı.` });
         }
     });
 

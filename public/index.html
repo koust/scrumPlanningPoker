@@ -468,49 +468,161 @@
             box-shadow: -4px 0 10px rgba(0, 0, 0, 0.05);
         }
 
-        .user-list { 
+        /* Tab içerikleri için düzenlemeler */
+        .user-list, .last-vote-panel {
+            height: 100%;
+            width: 100%;
             padding: 20px;
-            background-color: #f5f5f5;
-            border-bottom: 1px solid #e0e0e0;
+            background-color: #fff;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
         }
 
-        .user-list h3 {
-            margin-bottom: 16px;
-            color: var(--primary-color);
-            font-weight: 600;
+        .user-list-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 5px 0;
         }
-
+        
         .user-list p {
-            padding: 10px;
-            margin: 5px 0;
-            background-color: white;
+            padding: 12px 15px;
+            margin: 0;
+            background-color: #f9f9f9;
             border-radius: var(--border-radius);
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+        
+        .user-list p:hover {
+            background-color: #f0f0f0;
+            transform: translateY(-2px);
+            border-left: 3px solid var(--primary-color);
+        }
+        
+        .user-vote-status {
+            font-size: 12px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .user-vote-status.voted {
+            color: var(--success-color);
+        }
+        
+        .user-vote-status.waiting {
+            color: var(--accent-color);
+        }
+        
+        .user-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-dark);
+            word-break: break-word;
         }
 
-        .chat { 
-            flex: 1;
+        /* Son Oylama Paneli */
+        .last-vote-panel { 
+            height: 100%;
+            width: 100%;
             display: flex;
             flex-direction: column;
             padding: 20px;
+            background-color: #fff;
+            overflow-y: auto;
+        }
+
+        .last-vote-container {
+            flex: 1;
+            overflow-y: auto;
+            border: none;
+            border-radius: var(--border-radius);
+            background-color: white;
+            padding: 0;
+            min-height: 0; /* Flex içinde doğru scroll için önemli */
+        }
+
+        .vote-item {
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            border-radius: var(--border-radius);
+            background-color: #f5f5f5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .vote-item .user-name {
+            font-weight: 600;
+            flex: 1;
+        }
+
+        .vote-item .vote-value {
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .vote-item.coffee .vote-value {
+            background-color: #e74c3c;
+            font-size: 18px;
+        }
+
+        .vote-average {
+            margin-top: 15px;
+            padding: 12px;
+            background-color: var(--primary-light);
+            border-radius: var(--border-radius);
+            text-align: center;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .no-vote-message {
+            color: #999;
+            text-align: center;
+            padding: 20px 0;
+            font-style: italic;
+        }
+
+        .chat { 
+            height: 50%; /* Ekranın %50'sini kapla */
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            overflow-y: hidden; /* Ana konteynerde scroll olmasın */
         }
 
         .chat h3 {
             margin-bottom: 16px;
             color: var(--primary-color);
             font-weight: 600;
+            flex-shrink: 0; /* Başlığın küçülmesini engelle */
         }
 
         .chat-messages { 
-            flex: 1; 
-            overflow-y: auto; 
+            flex: 1; /* Mevcut alanı doldur */
+            overflow-y: auto; /* İçerik taşarsa scroll göster */
             border: 1px solid #e0e0e0; 
             border-radius: var(--border-radius);
             background-color: white;
             padding: 16px; 
             margin-bottom: 16px; 
-            min-height: 300px;
-            max-height: 500px;
+            min-height: 0; /* Flex içinde doğru scroll için önemli */
         }
 
         .chat-messages p {
@@ -579,18 +691,41 @@
             }
             
             .side-panel {
+                flex-direction: column;
                 width: 100%;
-                height: auto;
+                min-height: 400px;
                 border-left: none;
                 border-top: 1px solid #e0e0e0;
             }
             
-            .chat-messages {
-                max-height: 300px;
+            .tab-content {
+                height: 40%;
+            }
+            
+            .chat {
+                height: 60%;
             }
         }
 
         @media (max-width: 768px) {
+            .side-panel {
+                flex-direction: column; /* Mobilde alt alta yerleştir */
+                min-height: 500px;
+            }
+            
+            .tab-content {
+                height: 30%; /* Mobilde daha küçük bir alan kaplasın */
+            }
+            
+            .chat {
+                height: 70%; /* Mobilde chat daha büyük bir alan kaplasın */
+            }
+            
+            .tab-header {
+                padding: 12px 10px;
+                font-size: 14px; /* Mobilde daha küçük font */
+            }
+            
             #cards {
                 position: fixed;
                 left: 0;
@@ -737,6 +872,11 @@
                 flex-direction: column;
                 gap: 10px;
             }
+            
+            .tab-header {
+                padding: 10px 8px;
+                font-size: 12px; /* Daha küçük ekranlarda daha küçük font */
+            }
         }
 
         @media (max-height: 700px) {
@@ -762,6 +902,72 @@
                 font-size: 12px;
                 margin-bottom: 8px;
             }
+        }
+
+        /* Tab Yapısı Stilleri */
+        .tab-headers {
+            display: flex;
+            border-bottom: 1px solid #e0e0e0;
+            background-color: #f5f5f5;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .tab-header {
+            padding: 16px 20px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            text-align: center;
+            flex: 1;
+            position: relative;
+        }
+
+        .tab-header:hover {
+            background-color: #eaeaea;
+            color: var(--primary-color);
+        }
+
+        .tab-header.active {
+            color: var(--primary-color);
+            background-color: #fff;
+            border-bottom: 3px solid var(--primary-color);
+        }
+        
+        /* Tab aktif olduğunda küçük bir gösterge ekle */
+        .tab-header.active:after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-bottom: 6px solid #fff;
+        }
+
+        .tab-content {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .tab-panel {
+            display: none;
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            overflow-y: auto;
+        }
+
+        .tab-panel.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in-out;
         }
 
         /* İsim Değiştirme Popup Stilleri */
@@ -1167,10 +1373,36 @@
         </div>
     </div>
 
+
     <div class="side-panel">
-        <div class="user-list" id="userList">
-            <h3>Odadaki Kullanıcılar:</h3>
+        <!-- Tab Başlıkları -->
+        <div class="tab-headers">
+            <div class="tab-header active" data-tab="users-tab">Odadaki Kullanıcılar</div>
+            <div class="tab-header" data-tab="votes-tab">Son Oylama Sonuçları</div>
         </div>
+        
+        <!-- Tab İçerikleri -->
+        <div class="tab-content">
+            <!-- Kullanıcılar Tab İçeriği -->
+            <div class="tab-panel active" id="users-tab">
+                <div class="user-list" id="userList">
+                    <div class="user-list-container">
+                        <!-- Kullanıcılar buraya dinamik olarak eklenecek -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Son Oylama Tab İçeriği -->
+            <div class="tab-panel" id="votes-tab">
+                <div class="last-vote-panel">
+                    <div id="lastVoteResults" class="last-vote-container">
+                        <p class="no-vote-message">Henüz oylama yapılmadı.</p>
+                        <!-- Oylama sonuçları buraya dinamik olarak eklenecek -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <div class="chat">
             <h3>Sohbet</h3>
             <div class="chat-messages" id="chatMessages"></div>
@@ -1196,6 +1428,7 @@
             </div>
         </div>
     </div>
+    
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.4/socket.io.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js"></script>

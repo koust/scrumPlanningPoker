@@ -22,6 +22,7 @@ const clearVotesButton = document.getElementById('clearVotes');
 const changeNameBtn = document.getElementById('changeNameBtn');
 const namePopup = document.getElementById('namePopup');
 const popupClose = document.querySelector('.popup-close');
+const lastVoteResults = document.getElementById('lastVoteResults'); // Son oylama sonuçları
 
 // Global değişkenler
 let currentRoom = null;
@@ -219,6 +220,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Tüm event listener'ları bir arada başlatan fonksiyon
 function initEventListeners() {
+    // Tab geçişleri için event listeners
+    document.querySelectorAll('.tab-header').forEach(tab => {
+        tab.addEventListener('click', function() {
+            // Aktif tab class'ını değiştir
+            document.querySelectorAll('.tab-header').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            
+            // İlgili içeriği göster
+            const tabId = this.getAttribute('data-tab');
+            document.querySelectorAll('.tab-panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+            document.getElementById(tabId).classList.add('active');
+        });
+    });
+
     // Emoji picker işlevselliği
     emojiButton.addEventListener('click', () => {
         emojiPicker.style.display = emojiPicker.style.display === 'block' ? 'none' : 'block';
@@ -416,6 +433,9 @@ function clearVotes() {
             c.style.transform = ''; // Transform efektini temizle
         });
         averageDisplay.innerText = 'Ortalama: Gizli';
+        
+        // Son oylama panelini temizle
+        lastVoteResults.innerHTML = '<p class="no-vote-message">Henüz oylama yapılmadı.</p>';
     }
 }
 
@@ -488,7 +508,9 @@ function sendHeartbeat() {
 
 // Socket.io event listener'ları
 socket.on('userListUpdate', (users) => {
-    userList.innerHTML = '<h3>Odadaki Kullanıcılar:</h3>';
+    // Kullanıcı listesi konteyneri
+    const container = document.querySelector('.user-list-container');
+    container.innerHTML = ''; // Kullanıcı listesini temizle
     table.innerHTML = '';
 
     const angleStep = (2 * Math.PI) / users.length;
@@ -509,8 +531,25 @@ socket.on('userListUpdate', (users) => {
 
         // Kullanıcı listesini güncelle
         const listItem = document.createElement('p');
-        listItem.innerText = `${user.name} ${user.vote !== null ? '(Oylandı)' : '(Oylanmadı)'}`;
-        userList.appendChild(listItem);
+        
+        // Oy durumuna göre renk ve ikon ekle
+        if (user.vote !== null) {
+            listItem.innerHTML = `
+                <span class="user-vote-status voted">
+                    <i class="fas fa-check-circle"></i> Oylandı
+                </span>
+                <span class="user-name">${user.name}</span>
+            `;
+        } else {
+            listItem.innerHTML = `
+                <span class="user-vote-status waiting">
+                    <i class="fas fa-clock"></i> Bekleniyor
+                </span>
+                <span class="user-name">${user.name}</span>
+            `;
+        }
+        
+        container.appendChild(listItem);
     });
 });
 
@@ -519,14 +558,18 @@ socket.on('updateVotes', ({ votes, average, revealed }) => {
     const isSpinning = document.getElementById('table').classList.contains('table-spin');
     
     // Dönen masa animasyonu varsa, animasyon bitene kadar bekle
-
     
     if (revealed) {
         // Oylar gösterilecek
         averageDisplay.innerText = `Ortalama: ${average}`;
+        
+        // Son oylama paneline oyları ekle
+        updateLastVotesPanel(votes, average);
+        
         votes.forEach((user, index) => {
             const chair = table.children[index];
             if(user.vote !== null) {
+                // Masadaki sandalyeleri güncelle
                 if (user.vote === 0) {
                     if (chair) chair.innerText = `☕️ - ${user.name.substring(0, 10)}`;
                 } else {
@@ -546,6 +589,57 @@ socket.on('updateVotes', ({ votes, average, revealed }) => {
         });
     }
 });
+
+// Son oylama sonuçları panelini güncelleyen fonksiyon
+function updateLastVotesPanel(votes, average) {
+    // Paneli temizle
+    lastVoteResults.innerHTML = '';
+    
+    // Oy veren kullanıcılar
+    const votingUsers = votes.filter(user => user.vote !== null);
+    
+    // Eğer hiç oy yoksa mesaj göster
+    if (votingUsers.length === 0) {
+        const noVoteMessage = document.createElement('p');
+        noVoteMessage.className = 'no-vote-message';
+        noVoteMessage.textContent = 'Henüz oylama yapılmadı.';
+        lastVoteResults.appendChild(noVoteMessage);
+        return;
+    }
+    
+    // Her kullanıcının oyunu listele
+    votingUsers.forEach(user => {
+        const voteItem = document.createElement('div');
+        voteItem.className = 'vote-item';
+        
+        if (user.vote === 0) {
+            voteItem.classList.add('coffee');
+        }
+        
+        const userName = document.createElement('div');
+        userName.className = 'user-name';
+        userName.textContent = user.name;
+        
+        const voteValue = document.createElement('div');
+        voteValue.className = 'vote-value';
+        
+        if (user.vote === 0) {
+            voteValue.innerHTML = '☕️';
+        } else {
+            voteValue.textContent = user.vote;
+        }
+        
+        voteItem.appendChild(userName);
+        voteItem.appendChild(voteValue);
+        lastVoteResults.appendChild(voteItem);
+    });
+    
+    // Ortalama puanı ekle
+    const averageItem = document.createElement('div');
+    averageItem.className = 'vote-average';
+    averageItem.textContent = `Ortalama: ${average}`;
+    lastVoteResults.appendChild(averageItem);
+}
 
 socket.on('chatMessage', (data) => {
     console.log("Mesaj alındı:", data);
