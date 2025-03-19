@@ -183,9 +183,17 @@ function playResultSound() {
 // Socket.io bağlantısı
 const socket = io({
     reconnection: true,           // Yeniden bağlanmayı etkinleştir
-    reconnectionAttempts: 10,     // Maksimum yeniden bağlanma denemesi
-    reconnectionDelay: 2000,      // Yeniden bağlanma denemeleri arasındaki bekleme süresi (ms)
+    reconnectionAttempts: Infinity, // Sonsuz deneme
+    reconnectionDelay: 1000,      // İlk deneme için 1 saniye bekle
+    reconnectionDelayMax: 5000,   // Maksimum 5 saniye bekleme
+    timeout: 20000,              // Bağlantı zaman aşımı
+    autoConnect: true            // Otomatik bağlan
 });
+
+// Bağlantı durumu için UI elementleri
+const connectionStatus = document.createElement('div');
+connectionStatus.className = 'connection-status';
+document.body.appendChild(connectionStatus);
 
 // Twemoji'yi kullanarak metindeki emojileri işle
 function renderMessageWithEmojis(message) {
@@ -921,11 +929,56 @@ socket.on('chatMessage', (data) => {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 });
 
+socket.on('connect', () => {
+    console.log('Sunucuya bağlandı');
+    connectionStatus.textContent = 'Bağlı';
+    connectionStatus.className = 'connection-status connected';
+    
+    // Eğer daha önce bir odadaysak, yeniden katıl
+    if (currentRoom && currentUsername) {
+        socket.emit('registerUser', { 
+            room: currentRoom, 
+            userName: currentUsername,
+            role: currentRole 
+        });
+    }
+});
+
 socket.on('disconnect', () => {
-    console.log('Sunucu bağlantısı kesildi.');
-    // Kullanıcı bağlantı kesildiğinde odadan çıkmış olur, kartları gizle
+    console.log('Sunucu bağlantısı kesildi');
+    connectionStatus.textContent = 'Bağlantı Kesildi - Yeniden Bağlanıyor...';
+    connectionStatus.className = 'connection-status disconnected';
+    
+    // Kartları gizle ama diğer UI elementlerini koru
     document.getElementById('cards').style.display = 'none';
-    alert('Bağlantı kesildi. Yeniden bağlanmaya çalışılıyor...');
+});
+
+socket.on('reconnect', (attemptNumber) => {
+    console.log(`${attemptNumber}. denemede yeniden bağlandı`);
+    connectionStatus.textContent = 'Bağlı';
+    connectionStatus.className = 'connection-status connected';
+    
+    // Kartları tekrar göster
+    if (userRegistered) {
+        document.getElementById('cards').style.display = 'block';
+    }
+});
+
+socket.on('reconnect_attempt', (attemptNumber) => {
+    console.log(`Yeniden bağlanma denemesi: ${attemptNumber}`);
+    connectionStatus.textContent = `Yeniden Bağlanılıyor... (Deneme: ${attemptNumber})`;
+});
+
+socket.on('reconnect_error', (error) => {
+    console.log('Yeniden bağlanma hatası:', error);
+    connectionStatus.textContent = 'Bağlantı Hatası';
+    connectionStatus.className = 'connection-status error';
+});
+
+socket.on('reconnect_failed', () => {
+    console.log('Yeniden bağlanma başarısız oldu');
+    connectionStatus.textContent = 'Bağlantı Başarısız - Sayfayı Yenileyin';
+    connectionStatus.className = 'connection-status failed';
 });
 
 // Düzenli heartbeat gönder

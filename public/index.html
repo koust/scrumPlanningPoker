@@ -1520,6 +1520,53 @@
             opacity: 0.5;
             cursor: not-allowed;
         }
+
+        /* Bağlantı durumu göstergesi */
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            left: 40.5%;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 1000;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .connection-status.connected {
+            background-color: #4caf50;
+            color: white;
+        }
+
+        .connection-status.disconnected {
+            background-color: #ff9800;
+            color: white;
+            animation: pulse 1.5s infinite;
+        }
+
+        .connection-status.error {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .connection-status.failed {
+            background-color: #d32f2f;
+            color: white;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.6;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
     </style>
 </head>
 <body>
