@@ -942,6 +942,10 @@ socket.on('connect', () => {
             role: currentRole 
         });
     }
+
+    if (userRegistered) {
+        document.getElementById('cards').style.display = 'block';
+    }
 });
 
 socket.on('disconnect', () => {
