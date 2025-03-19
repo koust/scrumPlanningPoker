@@ -457,6 +457,140 @@
             max-width: 100%;
         }
 
+        /* Rol Seçimi Alanı */
+        .role-selection {
+            margin: 15px 0;
+            text-align: left;
+        }
+
+        .role-label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        .role-options {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .role-option {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            background-color: #f9f9f9;
+            border: 2px solid #e0e0e0;
+            border-radius: var(--border-radius);
+            padding: 12px 15px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .role-option:hover {
+            background-color: #f0f0f0;
+            border-color: #d0d0d0;
+        }
+
+        .role-option input[type="radio"] {
+            display: none;
+        }
+
+        .role-option label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            margin: 0;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .role-option label i {
+            font-size: 1.2em;
+            color: var(--primary-color);
+        }
+
+        .role-option input[type="radio"]:checked + label {
+            color: var(--primary-color);
+        }
+
+        .role-option input[type="radio"]:checked + label i {
+            color: var(--primary-color);
+        }
+
+        .role-option:has(input[type="radio"]:checked) {
+            background-color: var(--primary-light);
+            border-color: var(--primary-color);
+        }
+
+        .role-warning {
+            color: var(--danger-color);
+            font-size: 14px;
+            margin-top: 5px;
+            font-weight: 500;
+        }
+
+        /* Scrum Master Alanı */
+        .scrum-master-area {
+            top: 20px;
+            right: 100px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 5;
+        }
+
+        .scrum-master-chair {
+            padding-left: 20px;
+            padding-inline: 20px;
+            height: 55px;
+            background: #f5f5f5; 
+            border: 2px solid #e0e0e0; 
+            border-radius: var(--border-radius); 
+            text-align: center; 
+            line-height: 55px; 
+            font-size: 14px; 
+            font-weight: 600;
+            overflow: hidden; 
+            white-space: nowrap; 
+            text-overflow: ellipsis;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
+            padding-top: 18px;
+            line-height: 1.2;
+            margin-left: auto;
+        }
+
+        .scrum-master-chair:before {
+            content: "Scrum Master";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            font-size: 10px;
+            font-weight: 500;
+            color: #fff;
+            background-color: var(--accent-color);
+            padding: 2px 0;
+        }
+
+        @media (max-width: 768px) {
+            .role-options {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .scrum-master-area {
+                top: auto;
+                right: auto;
+                left: 20px;
+                bottom: 140px;
+                width: auto;
+                flex-direction: row;
+            }
+        }
+
         /* Yan Panel */
         .side-panel { 
             width: 350px; 
@@ -526,6 +660,22 @@
             font-size: 14px;
             color: var(--text-dark);
             word-break: break-word;
+        }
+        
+        .user-role {
+            font-size: 12px;
+            color: #777;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .user-role.developer {
+            color: var(--primary-color);
+        }
+        
+        .user-role.scrumMaster {
+            color: var(--accent-color);
         }
 
         /* Son Oylama Paneli */
@@ -1297,6 +1447,79 @@
                 height: 300px;
             }
         }
+
+        /* Son Oylama Panel Stilleri */
+        .last-vote-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .last-vote-list li {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            padding: 6px;
+            border-radius: 4px;
+            background-color: rgba(0, 0, 0, 0.03);
+        }
+
+        .user-name {
+            font-weight: bold;
+            margin-right: 8px;
+            flex: 1;
+        }
+
+        .user-vote {
+            padding: 2px 8px;
+            border-radius: 4px;
+            background-color: var(--primary-color);
+            color: white;
+            margin-left: auto;
+        }
+
+        .average-score {
+            margin-top: 15px;
+            padding: 8px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        /* Özel role renkleri için */
+        .last-vote-list .user-role {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin: 0 8px;
+        }
+
+        /* Rol seçim butonları */
+        .role-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .role-btn {
+            font-size: 0.9rem;
+            padding: 4px 10px;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+        
+        .role-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        
+        .role-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -1309,10 +1532,46 @@
         <label for="room">Oda Adı:</label>
         <input type="text" id="room" placeholder="Oda adını girin">
         
+        <!-- Rol Seçimi -->
+        <div class="role-selection">
+            <label class="role-label">Rolünüz:</label>
+            <div class="role-options">
+                <div class="role-option">
+                    <input type="radio" id="roleDeveloper" name="role" value="developer" checked>
+                    <label for="roleDeveloper">
+                        <i class="fas fa-laptop-code"></i> Developer
+                    </label>
+                </div>
+                <div class="role-option">
+                    <input type="radio" id="roleScrumMaster" name="role" value="scrumMaster">
+                    <label for="roleScrumMaster">
+                        <i class="fas fa-user-tie"></i> Scrum Master
+                    </label>
+                </div>
+            </div>
+            <div id="roleWarning" class="role-warning" style="display: none;">
+                Bu odada zaten 2 Scrum Master var. Lütfen Developer rolünü seçin.
+            </div>
+        </div>
+        
         <button id="joinRoom">Odaya Katıl</button>
     </div>
 
-    <div id="mainContent">
+    <div id="mainContent" style="display: none;">
+        <div class="container">
+            <div class="row mb-3">
+                <div class="col-12 d-flex justify-content-between">
+                    <h2 id="roomDisplay"></h2>
+                    
+                    <!-- Rol seçim butonları -->
+                    <div class="role-selector">
+                        <span>Rol: </span>
+                        <button id="developerButton" class="btn btn-sm role-btn">Developer</button>
+                        <button id="scrumMasterButton" class="btn btn-sm role-btn">Scrum Master</button>
+                    </div>
+                </div>
+            </div>
+        </div>
         <!-- Sol üst köşedeki mola butonu -->
         <button id="breakBtn" title="Mola Ver"  class="card" data-value="0">☕️</button>
         
@@ -1322,6 +1581,11 @@
                 <i class="fas fa-user-edit"></i> <span class="btn-text">İsim Değiştir</span>
             </button>
             <button id="toggleSound" title="Sesi Aç/Kapat"><i class="fas fa-volume-up"></i></button>
+
+            <!-- Scrum Master Alanı -->
+            <div class="scrum-master-area" id="scrumMasterArea">
+                <!-- Scrum Master'lar burada gösterilecek -->
+            </div>
         </div>
         
         <div class="room-info-container">
@@ -1332,7 +1596,8 @@
             <!-- Kullanıcılar masa etrafında dinamik olarak yerleştirilecek -->
         </div>
 
-            <!-- Galatasaray bayrağı -->
+
+        <!-- Galatasaray bayrağı -->
         <div class="gs-logo"></div>
         <div id="average">Ortalama: Gizli</div>
 

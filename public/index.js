@@ -23,12 +23,15 @@ const changeNameBtn = document.getElementById('changeNameBtn');
 const namePopup = document.getElementById('namePopup');
 const popupClose = document.querySelector('.popup-close');
 const lastVoteResults = document.getElementById('lastVoteResults'); // Son oylama sonuçları
+const scrumMasterArea = document.getElementById('scrumMasterArea'); // Scrum Master alanı
+const roleWarning = document.getElementById('roleWarning'); // Rol uyarısı
 
 // Global değişkenler
 let currentRoom = null;
 let currentUsername = null;
 let userRegistered = false;
 let soundEnabled = true;
+let currentRole = 'developer'; // Varsayılan rol
 
 // Web Audio API ile basit sesler oluşturacak yardımcı fonksiyon
 function createAudioContext() {
@@ -193,33 +196,133 @@ function renderMessageWithEmojis(message) {
 document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     const roomFromURL = urlParams.get('room');
+    const roleFromURL = urlParams.get('role');
     
     // Eğer URL'de oda parametresi varsa otomatik olarak o odaya bağlan
     if (roomFromURL) {
         let userName = `Kullanıcı${Math.floor(Math.random() * 1000)}`; // Varsayılan kullanıcı adı
         currentRoom = roomFromURL;
         currentUsername = userName;
-        socket.emit('registerUser', { room: currentRoom, userName }); // Kullanıcıyı odaya kaydet
-
-        document.getElementById('nameInput').style.display = 'none';
-        document.getElementById('mainContent').style.display = 'block';
-        document.querySelector('.side-panel').style.display = 'flex';
-        document.getElementById('cards').style.display = 'block'; // Kartları göster
-        roomInfo.textContent = `Oda: ${currentRoom}`;
-        userRegistered = true;
-
-        const messageElement = document.createElement('p');
-        messageElement.className = 'system-message';
-        messageElement.innerHTML = `<strong>Sistem:</strong> Şu anki oda: <strong>${currentRoom}</strong>`;
-        chatMessages.appendChild(messageElement);
+        
+        // URL'den gelen role değerini kontrol et ve geçerliyse kullan
+        if (roleFromURL && (roleFromURL === 'developer' || roleFromURL === 'scrumMaster')) {
+            currentRole = roleFromURL;
+        } else {
+            currentRole = 'developer'; // Varsayılan rol
+        }
+        
+        // Önce Scrum Master sayısını kontrol et
+        if (currentRole === 'scrumMaster') {
+            socket.emit('checkScrumMasterCount', roomFromURL, (count) => {
+                if (count >= 2) {
+                    // Scrum Master limiti dolu, developer olarak devam et
+                    currentRole = 'developer';
+                }
+                // Kullanıcıyı odaya kaydet
+                socket.emit('registerUser', { room: currentRoom, userName, role: currentRole });
+                showMainContent();
+            });
+        } else {
+            // Developer rolü için doğrudan katıl
+            socket.emit('registerUser', { room: currentRoom, userName, role: currentRole });
+            showMainContent();
+        }
     }
     
     // Event listeners
     initEventListeners();
 });
 
+// Ana içeriği gösterme fonksiyonu (kodun tekrarını önlemek için)
+function showMainContent() {
+    document.getElementById('nameInput').style.display = 'none';
+    document.getElementById('mainContent').style.display = 'block';
+    document.querySelector('.side-panel').style.display = 'flex';
+    document.getElementById('cards').style.display = 'block'; // Kartları göster
+    roomInfo.textContent = `Oda: ${currentRoom}`;
+    userRegistered = true;
+
+    // Rol butonlarını ayarla
+    setupRoleButtons();
+
+    const messageElement = document.createElement('p');
+    messageElement.className = 'system-message';
+    messageElement.innerHTML = `<strong>Sistem:</strong> Şu anki oda: <strong>${currentRoom}</strong>`;
+    chatMessages.appendChild(messageElement);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// Rol butonları işlevselliği
+function setupRoleButtons() {
+    const developerBtn = document.getElementById('developerButton');
+    const scrumMasterBtn = document.getElementById('scrumMasterButton');
+    
+    // Aktif rolü belirt
+    updateRoleButtons();
+    
+    // Developer butonu tıklama olayı
+    developerBtn.addEventListener('click', () => {
+        if (currentRole !== 'developer') {
+            changeRole('developer');
+        }
+    });
+    
+    // Scrum Master butonu tıklama olayı
+    scrumMasterBtn.addEventListener('click', () => {
+        // Eğer zaten Scrum Master değilse, rol değişikliği iste
+        if (currentRole !== 'scrumMaster') {
+            // Önce sunucudan Scrum Master sayısını kontrol et
+            socket.emit('checkScrumMasterCount', currentRoom, (count) => {
+                if (count >= 2) {
+                    alert('Bu odada maksimum 2 Scrum Master olabilir!');
+                } else {
+                    changeRole('scrumMaster');
+                }
+            });
+        }
+    });
+}
+
+// Rol değiştirme fonksiyonu
+function changeRole(newRole) {
+    // Sunucuya rol değişikliği bildir
+    socket.emit('changeRole', { room: currentRoom, userName: currentUsername, newRole });
+}
+
+// Rol butonlarını güncelle
+function updateRoleButtons() {
+    const developerBtn = document.getElementById('developerButton');
+    const scrumMasterBtn = document.getElementById('scrumMasterButton');
+    
+    // Tüm butonları resetle
+    developerBtn.classList.remove('active');
+    scrumMasterBtn.classList.remove('active');
+    
+    // Aktif rolü belirt
+    if (currentRole === 'developer') {
+        developerBtn.classList.add('active');
+    } else if (currentRole === 'scrumMaster') {
+        scrumMasterBtn.classList.add('active');
+    }
+}
+
+// Rol değişikliği olduğunda rol butonlarını güncelle
+socket.on('roleUpdated', (role) => {
+    currentRole = role;
+    updateRoleButtons();
+});
+
 // Tüm event listener'ları bir arada başlatan fonksiyon
 function initEventListeners() {
+    // Rol seçimi için event listeners
+    document.querySelectorAll('input[name="role"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            currentRole = this.value;
+            // Scrum Master seçildi, odaya katılmadan önce uyarı yok
+            roleWarning.style.display = 'none';
+        });
+    });
+
     // Tab geçişleri için event listeners
     document.querySelectorAll('.tab-header').forEach(tab => {
         tab.addEventListener('click', function() {
@@ -318,23 +421,50 @@ function joinRoom() {
     const room = roomInput.value.trim();
 
     if (userName && room) {
-        currentRoom = room;
-        currentUsername = userName;
-        socket.emit('registerUser', { room, userName });
-        document.getElementById('nameInput').style.display = 'none';
-        document.getElementById('mainContent').style.display = 'block';
-        document.querySelector('.side-panel').style.display = 'flex';
-        document.getElementById('cards').style.display = 'block'; // Kartları göster
-        roomInfo.textContent = `Oda: ${room}`;
-        userRegistered = true;
-
-        const messageElement = document.createElement('p');
-        messageElement.className = 'system-message';
-        messageElement.innerHTML = `<strong>Sistem:</strong> Şu anki oda: <strong>${room}</strong>`;
-        chatMessages.appendChild(messageElement);
+        // Seçilen rolü al
+        currentRole = document.querySelector('input[name="role"]:checked').value;
+        
+        // Önce odadaki mevcut Scrum Master sayısını kontrol et
+        if (currentRole === 'scrumMaster') {
+            socket.emit('checkScrumMasterCount', room, (count) => {
+                if (count >= 2) {
+                    // Scrum Master limiti dolu, uyarı göster
+                    roleWarning.style.display = 'block';
+                    // Developer rolünü otomatik seç
+                    document.getElementById('roleDeveloper').checked = true;
+                    currentRole = 'developer';
+                } else {
+                    // Limiti aşmıyor, odaya katıl
+                    completeJoinRoom(userName, room, currentRole);
+                }
+            });
+        } else {
+            // Developer rolü için doğrudan katıl
+            completeJoinRoom(userName, room, currentRole);
+        }
     } else {
         alert('Lütfen adınızı ve oda adını girin.');
     }
+}
+
+// Odaya katılma işlemini tamamla
+function completeJoinRoom(userName, room, role) {
+    currentRoom = room;
+    currentUsername = userName;
+    // Role bilgisini de gönder
+    socket.emit('registerUser', { room, userName, role });
+    
+    document.getElementById('nameInput').style.display = 'none';
+    document.getElementById('mainContent').style.display = 'block';
+    document.querySelector('.side-panel').style.display = 'flex';
+    document.getElementById('cards').style.display = 'block'; // Kartları göster
+    roomInfo.textContent = `Oda: ${room}`;
+    userRegistered = true;
+
+    const messageElement = document.createElement('p');
+    messageElement.className = 'system-message';
+    messageElement.innerHTML = `<strong>Sistem:</strong> Şu anki oda: <strong>${room}</strong>`;
+    chatMessages.appendChild(messageElement);
 }
 
 // Oy kartını seçme fonksiyonu
@@ -511,34 +641,59 @@ socket.on('userListUpdate', (users) => {
     // Kullanıcı listesi konteyneri
     const container = document.querySelector('.user-list-container');
     container.innerHTML = ''; // Kullanıcı listesini temizle
-    table.innerHTML = '';
+    table.innerHTML = ''; // Masa temizle
+    scrumMasterArea.innerHTML = ''; // Scrum Master alanını temizle
+    
+    // Developer'ları ve Scrum Master'ları ayır
+    const developers = users.filter(user => user.role === 'developer');
+    const scrumMasters = users.filter(user => user.role === 'scrumMaster');
+    
+    // Developer'ları masaya yerleştir
+    if (developers.length > 0) {
+        const angleStep = (2 * Math.PI) / developers.length;
+        developers.forEach((user, index) => {
+            const angle = index * angleStep;
+            const x = 250 + 200 * Math.cos(angle) - 42.5; // Merkez 250px, yarıçap 200px
+            const y = 250 + 200 * Math.sin(angle) - 27.5;
 
-    const angleStep = (2 * Math.PI) / users.length;
-    users.forEach((user, index) => {
-        const angle = index * angleStep;
-        const x = 250 + 200 * Math.cos(angle) - 42.5; // Merkez 250px, yarıçap 200px
-        const y = 250 + 200 * Math.sin(angle) - 27.5;
-
-        // Kullanıcıyı masa etrafında göster
-        const chair = document.createElement('div');
-        chair.className = 'chair';
-        chair.style.left = `${x}px`;
-        chair.style.top = `${y}px`;
-        chair.style.backgroundColor = user.vote !== null ? '#4361ee' : 'white';
-        chair.style.color = user.vote !== null ? 'white' : '#212529';
-        chair.innerText = user.name.substring(0, 10); // Kullanıcının ilk 10 harfi
-        table.appendChild(chair);
-
+            // Developer'ı masa etrafında göster
+            const chair = document.createElement('div');
+            chair.className = 'chair';
+            chair.style.left = `${x}px`;
+            chair.style.top = `${y}px`;
+            chair.style.backgroundColor = user.vote !== null ? '#4361ee' : 'white';
+            chair.style.color = user.vote !== null ? 'white' : '#212529';
+            chair.innerText = user.name.substring(0, 10); // Kullanıcının ilk 10 harfi
+            table.appendChild(chair);
+        });
+    }
+    
+    // Scrum Master'ları yan panel alanına yerleştir
+    scrumMasters.forEach(user => {
+        const scrumMasterChair = document.createElement('div');
+        scrumMasterChair.className = 'scrum-master-chair';
+        scrumMasterChair.style.backgroundColor = user.vote !== null ? '#ff9f1c' : '#f5f5f5';
+        scrumMasterChair.style.color = user.vote !== null ? 'white' : '#212529';
+        scrumMasterChair.innerText = user.name.substring(0, 10);
+        scrumMasterArea.appendChild(scrumMasterChair);
+    });
+    
+    // Tüm kullanıcıları listeye ekle
+    users.forEach(user => {
         // Kullanıcı listesini güncelle
         const listItem = document.createElement('p');
         
-        // Oy durumuna göre renk ve ikon ekle
+        // Oy durumuna ve role göre renk ve ikon ekle
         if (user.vote !== null) {
             listItem.innerHTML = `
                 <span class="user-vote-status voted">
                     <i class="fas fa-check-circle"></i> Oylandı
                 </span>
                 <span class="user-name">${user.name}</span>
+                <span class="user-role ${user.role}">
+                    <i class="fas ${user.role === 'scrumMaster' ? 'fa-user-tie' : 'fa-laptop-code'}"></i>
+                    ${user.role === 'scrumMaster' ? 'Scrum Master' : 'Developer'}
+                </span>
             `;
         } else {
             listItem.innerHTML = `
@@ -546,6 +701,10 @@ socket.on('userListUpdate', (users) => {
                     <i class="fas fa-clock"></i> Bekleniyor
                 </span>
                 <span class="user-name">${user.name}</span>
+                <span class="user-role ${user.role}">
+                    <i class="fas ${user.role === 'scrumMaster' ? 'fa-user-tie' : 'fa-laptop-code'}"></i>
+                    ${user.role === 'scrumMaster' ? 'Scrum Master' : 'Developer'}
+                </span>
             `;
         }
         
@@ -554,91 +713,177 @@ socket.on('userListUpdate', (users) => {
 });
 
 socket.on('updateVotes', ({ votes, average, revealed }) => {
-    // Animasyon sırasında değerler değişeceği için setTimeout ile bekletelim
-    const isSpinning = document.getElementById('table').classList.contains('table-spin');
-    
-    // Dönen masa animasyonu varsa, animasyon bitene kadar bekle
-    
-    if (revealed) {
-        // Oylar gösterilecek
-        averageDisplay.innerText = `Ortalama: ${average}`;
-        
-        // Son oylama paneline oyları ekle
-        updateLastVotesPanel(votes, average);
-        
-        votes.forEach((user, index) => {
+    const table = document.getElementById('table');
+    const lastVoteResults = document.getElementById('lastVoteResults');
+    const scrumMasterChairs = document.querySelectorAll('.scrumMaster-chair');
+
+    // Tüm sandalyeleri temizle
+    for (let i = 0; i < table.children.length; i++) {
+        table.children[i].innerText = '';
+        table.children[i].style.backgroundColor = '';
+        table.children[i].style.color = '';
+    }
+
+    // Scrum Master sandalyelerini temizle
+    scrumMasterChairs.forEach(chair => {
+        chair.innerText = '';
+        chair.style.backgroundColor = '';
+        chair.style.color = '';
+    });
+
+    // Developer ve Scrum Master'ları ayır
+    const developers = votes.filter(user => user.role === 'developer');
+    const scrumMasters = votes.filter(user => user.role === 'scrumMaster');
+
+    // Developer'ları masaya yerleştir
+    developers.forEach((user, index) => {
+        if (index < table.children.length) {
             const chair = table.children[index];
-            if(user.vote !== null) {
-                // Masadaki sandalyeleri güncelle
-                if (user.vote === 0) {
-                    if (chair) chair.innerText = `☕️ - ${user.name.substring(0, 10)}`;
-                } else {
-                    if (chair) chair.innerText = `${user.vote} - ${user.name.substring(0, 10)}`;
-                }
+            // Kullanıcı adını göster
+            chair.innerHTML = `${user.name.substring(0, 10)}<br><span class="user-role developer">Developer</span>`;
+
+            // Eğer oylar görünür hale geldiyse veya kullanıcı oy verdiyse göster
+            if (revealed && user.vote !== null) {
+                chair.innerHTML = `${user.vote === 0 ? '☕️' : user.vote}<br>${user.name.substring(0, 10)}<br><span class="user-role developer">Developer</span>`;
+            } else if (!revealed && user.vote !== null) {
+                chair.innerHTML = `🎯<br>${user.name.substring(0, 10)}<br><span class="user-role developer">Developer</span>`;
             }
-        });
-    } else {
-        // Oylar gizlenecek
+        }
+    });
+
+    // Scrum Master'ları yerleştir
+    scrumMasters.forEach((user, index) => {
+        if (index < scrumMasterChairs.length) {
+            const chair = scrumMasterChairs[index];
+            chair.style.backgroundColor = '#ff9f1c';
+            chair.style.color = 'white';
+            
+            // Kullanıcı adını göster
+            chair.innerHTML = `${user.name.substring(0, 10)}<br><span class="user-role scrumMaster">Scrum Master</span>`;
+
+            // Eğer oylar görünür hale geldiyse veya kullanıcı oy verdiyse göster
+            if (revealed && user.vote !== null) {
+                chair.innerHTML = `${user.vote === 0 ? '☕️' : user.vote}<br>${user.name.substring(0, 10)}<br><span class="user-role scrumMaster">Scrum Master</span>`;
+            } else if (!revealed && user.vote !== null) {
+                chair.innerHTML = `🎯<br>${user.name.substring(0, 10)}<br><span class="user-role scrumMaster">Scrum Master</span>`;
+            }
+        }
+    });
+
+    // Eğer oylar açıklandıysa Son Oylama bölümünü güncelle
+    if (revealed) {
+        updateLastVotesPanel(votes, average);
+    }else {
+        
         document.querySelectorAll('.card').forEach(c => {
             c.classList.remove('selected-card');
             c.style.transform = ''; // Transform efektini temizle
         });
-        averageDisplay.innerText = 'Ortalama: Gizli';
-        Array.from(table.children).forEach(chair => {
-            chair.innerText = chair.innerText.split('-')[0]; // Sadece ismi göster
-        });
     }
 });
 
-// Son oylama sonuçları panelini güncelleyen fonksiyon
+// Son Oylama panelini güncelleme fonksiyonu
 function updateLastVotesPanel(votes, average) {
-    // Paneli temizle
+    const lastVoteResults = document.getElementById('lastVoteResults');
+    
+    // Son Oylama panelini temizle
     lastVoteResults.innerHTML = '';
     
-    // Oy veren kullanıcılar
-    const votingUsers = votes.filter(user => user.vote !== null);
-    
     // Eğer hiç oy yoksa mesaj göster
-    if (votingUsers.length === 0) {
-        const noVoteMessage = document.createElement('p');
-        noVoteMessage.className = 'no-vote-message';
-        noVoteMessage.textContent = 'Henüz oylama yapılmadı.';
-        lastVoteResults.appendChild(noVoteMessage);
+    if (votes.length === 0 || votes.every(user => user.vote === null)) {
+        lastVoteResults.innerHTML = '<p>Henüz oylama yapılmadı.</p>';
         return;
     }
     
-    // Her kullanıcının oyunu listele
-    votingUsers.forEach(user => {
-        const voteItem = document.createElement('div');
-        voteItem.className = 'vote-item';
+    // Başlık ekle
+    const header = document.createElement('h5');
+    header.textContent = 'Son Oylama Sonuçları';
+    lastVoteResults.appendChild(header);
+    
+    // Liste oluştur
+    const list = document.createElement('ul');
+    list.className = 'last-vote-list';
+    
+    // Developer'ları ve Scrum Master'ları ayrı listele
+    const developers = votes.filter(user => user.role === 'developer');
+    const scrumMasters = votes.filter(user => user.role === 'scrumMaster');
+    
+    // Önce Developer'ların oylarını listele
+    developers.forEach(user => {
+        const item = document.createElement('li');
         
-        if (user.vote === 0) {
-            voteItem.classList.add('coffee');
-        }
-        
-        const userName = document.createElement('div');
+        const userName = document.createElement('span');
         userName.className = 'user-name';
         userName.textContent = user.name;
         
-        const voteValue = document.createElement('div');
-        voteValue.className = 'vote-value';
+        const userRole = document.createElement('span');
+        userRole.className = 'user-role developer';
+        userRole.textContent = 'Developer';
         
-        if (user.vote === 0) {
-            voteValue.innerHTML = '☕️';
+        const userVote = document.createElement('span');
+        userVote.className = 'user-vote';
+        
+        if (user.vote === null) {
+            userVote.textContent = 'Oy vermedi';
+        } else if (user.vote === 0) {
+            userVote.textContent = '☕️ (Mola istiyor)';
         } else {
-            voteValue.textContent = user.vote;
+            userVote.textContent = user.vote;
         }
         
-        voteItem.appendChild(userName);
-        voteItem.appendChild(voteValue);
-        lastVoteResults.appendChild(voteItem);
+        item.appendChild(userName);
+        item.appendChild(userRole);
+        item.appendChild(userVote);
+        list.appendChild(item);
     });
     
-    // Ortalama puanı ekle
-    const averageItem = document.createElement('div');
-    averageItem.className = 'vote-average';
-    averageItem.textContent = `Ortalama: ${average}`;
-    lastVoteResults.appendChild(averageItem);
+    // Sonra Scrum Master'ların oylarını listele
+    scrumMasters.forEach(user => {
+        const item = document.createElement('li');
+        
+        const userName = document.createElement('span');
+        userName.className = 'user-name';
+        userName.textContent = user.name;
+        
+        const userRole = document.createElement('span');
+        userRole.className = 'user-role scrumMaster';
+        userRole.textContent = 'Scrum Master';
+        
+        const userVote = document.createElement('span');
+        userVote.className = 'user-vote';
+        
+        if (user.vote === null) {
+            userVote.textContent = 'Oy vermedi';
+        } else if (user.vote === 0) {
+            userVote.textContent = '☕️ (Mola istiyor)';
+        } else {
+            userVote.textContent = user.vote;
+        }
+        
+        item.appendChild(userName);
+        item.appendChild(userRole);
+        item.appendChild(userVote);
+        list.appendChild(item);
+    });
+    
+    lastVoteResults.appendChild(list);
+    
+    // Ortalamayı ekle (sadece developer'ların oyları)
+    const developerVotes = developers
+        .filter(dev => dev.vote !== null && dev.vote !== 0)
+        .map(dev => dev.vote);
+    
+    const averageElement = document.createElement('p');
+    averageElement.className = 'average-score';
+    
+    if (developerVotes.length > 0) {
+        const devAverage = Math.round((developerVotes.reduce((sum, vote) => sum + vote, 0) / developerVotes.length) * 10) / 10;
+        averageElement.innerHTML = `<strong>Ortalama puan:</strong> ${devAverage}`;
+    } else {
+        averageElement.innerHTML = '<strong>Ortalama puan:</strong> Henüz developer oyu yok';
+    }
+    
+    lastVoteResults.appendChild(averageElement);
 }
 
 socket.on('chatMessage', (data) => {
