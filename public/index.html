@@ -861,6 +861,37 @@
             50% { transform: scale(1.05); }
             100% { transform: scale(1); }
         }
+
+        /* Mola Butonu Stili */
+        #breakBtn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            width: 65px;
+            height: 65px;
+            border-radius: 50%;
+            font-size: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0;
+            background-color: #e74c3c;
+            color: var(--text-light);
+            box-shadow: var(--card-shadow);
+            z-index: 90;
+            transition: all 0.3s ease;
+        }
+        
+        #breakBtn:hover {
+            transform: translateY(-2px) rotate(15deg);
+            box-shadow: var(--hover-shadow);
+            background-color: #c0392b;
+        }
+        
+        #breakBtn:active {
+            transform: translateY(0) rotate(0);
+            background-color: #2f1513;
+        }
     </style>
 </head>
 <body>
@@ -877,6 +908,9 @@
     </div>
 
     <div id="mainContent">
+        <!-- Sol üst köşedeki mola butonu -->
+        <button id="breakBtn" title="Mola Ver"  class="card" data-value="0">☕️</button>
+        
         <!-- Sağ üst köşedeki kontrol butonları için container -->
         <div class="top-controls">
             <button id="changeNameBtn" title="Kullanıcı Adını Değiştir">
@@ -931,7 +965,6 @@
             <div class="card" data-value="30">30</div>
             <div class="card" data-value="35">35</div>
             <div class="card" data-value="40">40</div>
-            <div class="card" data-value="0">☕️</div>
         </div>
     </div>
 

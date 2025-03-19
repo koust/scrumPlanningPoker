@@ -60,8 +60,11 @@ io.on('connection', (socket) => {
     socket.on('revealVotes', (room) => {
         if (rooms[room]) {
             revealed[room] = true;
-            const votes = Object.values(rooms[room]).map(user => user.vote).filter(v => v !== null);
-            const average = votes.length ? (votes.reduce((sum, v) => sum + v, 0) / votes.length).toFixed(2) : 0;
+            const allVotes = Object.values(rooms[room]).map(user => user.vote).filter(v => v !== null);
+            const validVotes = allVotes.filter(v => v !== 0);
+            const average = validVotes.length ? (validVotes.reduce((sum, v) => sum + v, 0) / validVotes.length).toFixed(2) : 0;
+            
+            console.log(`Oda ${room} - Toplam oy: ${allVotes.length}, Geçerli oy: ${validVotes.length}, Ortalama: ${average}`);
 
             io.to(room).emit('updateVotes', {
                 votes: Object.values(rooms[room]),
