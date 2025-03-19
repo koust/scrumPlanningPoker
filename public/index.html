@@ -812,9 +812,54 @@
             background-color: var(--primary-color);
         }
 
+        #changeNameBtn {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 15px;
+            height: 45px;
+            background-color: var(--accent-color);
+            color: var(--text-light);
+            border-radius: var(--border-radius);
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            box-shadow: var(--card-shadow);
+        }
+
+        #changeNameBtn:hover {
+            background-color: #f08300;
+            transform: translateY(-2px);
+            box-shadow: var(--hover-shadow);
+        }
+
         .btn-text {
             font-size: 16px;
             font-weight: 600;
+        }
+
+        /* Galatasaray bayrağı stili */
+        .gs-logo {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            width: 45px;
+            height: 45px;
+            background-image: url('https://upload.wikimedia.org/wikipedia/commons/f/f6/Galatasaray_Sports_Club_Logo.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            z-index: 5;
+            border-radius: 50%;
+            animation: pulse 2s infinite ease-in-out;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
         }
     </style>
 </head>
@@ -848,6 +893,8 @@
             <!-- Kullanıcılar masa etrafında dinamik olarak yerleştirilecek -->
         </div>
 
+            <!-- Galatasaray bayrağı -->
+        <div class="gs-logo"></div>
         <div id="average">Ortalama: Gizli</div>
 
         <div id="controls">
