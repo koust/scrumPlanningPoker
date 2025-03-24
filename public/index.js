@@ -193,6 +193,7 @@ const socket = io({
 // Bağlantı durumu için UI elementleri
 const connectionStatus = document.createElement('div');
 connectionStatus.className = 'connection-status';
+connectionStatus.style.display = 'none'; // Başlangıçta gizli
 document.body.appendChild(connectionStatus);
 
 // Twemoji'yi kullanarak metindeki emojileri işle
@@ -620,6 +621,40 @@ function closeNamePopup() {
 function sendMessage() {
     const message = chatInput.value.trim();
     if (message && currentRoom) {
+        // Sistem komutu kontrolü
+        if (message.startsWith('/')) {
+            const [command, ...params] = message.slice(1).split(' ');
+            if (command === 'help') {
+                const helpMessage = `
+                    Kullanılabilir komutlar:
+                    /makeit backgroundColor red - Arka plan rengini değiştir
+                    /makeit textColor blue - Yazı rengini değiştir
+                    /makeit fontSize 16px - Yazı boyutunu değiştir
+                    /makeit fontFamily Arial - Yazı tipini değiştir
+                    /makeit cardColor green - Kart rengini değiştir
+                    /makeit tableColor brown - Masa rengini değiştir
+                    /makeit chairColor gray - Sandalye rengini değiştir
+                    /play [YouTube URL] - YouTube videosu oynat
+                    /stop - Video oynatmayı durdur
+                    /reset - Tüm konfigürasyonları sıfırla
+                    /show - Mevcut konfigürasyonları göster
+                `;
+                const messageElement = document.createElement('p');
+                messageElement.className = 'system-message';
+                messageElement.innerHTML = helpMessage.replace(/\n/g, '<br>');
+                chatMessages.appendChild(messageElement);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                chatInput.value = '';
+                return;
+            } else if (command === 'stop') {
+                // /stop komutu için sadece sunucuya komut gönder
+                // Yerel işlem yapma, sunucu tüm clientlara bildirecek
+                socket.emit('chatMessage', { room: currentRoom, message });
+                chatInput.value = '';
+                return;
+            }
+        }
+        
         socket.emit('chatMessage', { room: currentRoom, message });
         if (soundEnabled) {
             playMessageSentSound();
@@ -931,8 +966,11 @@ socket.on('chatMessage', (data) => {
 
 socket.on('connect', () => {
     console.log('Sunucuya bağlandı');
-    connectionStatus.textContent = 'Bağlı';
-    connectionStatus.className = 'connection-status connected';
+    if (userRegistered) {
+        connectionStatus.style.display = 'block';
+        connectionStatus.textContent = 'Bağlı';
+        connectionStatus.className = 'connection-status connected';
+    }
     
     // Eğer daha önce bir odadaysak, yeniden katıl
     if (currentRoom && currentUsername) {
@@ -950,17 +988,25 @@ socket.on('connect', () => {
 
 socket.on('disconnect', () => {
     console.log('Sunucu bağlantısı kesildi');
-    connectionStatus.textContent = 'Bağlantı Kesildi - Yeniden Bağlanıyor...';
-    connectionStatus.className = 'connection-status disconnected';
+    if (userRegistered) {
+        connectionStatus.style.display = 'block';
+        connectionStatus.textContent = 'Bağlantı Kesildi - Yeniden Bağlanıyor...';
+        connectionStatus.className = 'connection-status disconnected';
+    }
     
     // Kartları gizle ama diğer UI elementlerini koru
-    document.getElementById('cards').style.display = 'none';
+    if (userRegistered) {
+        document.getElementById('cards').style.display = 'none';
+    }
 });
 
 socket.on('reconnect', (attemptNumber) => {
     console.log(`${attemptNumber}. denemede yeniden bağlandı`);
-    connectionStatus.textContent = 'Bağlı';
-    connectionStatus.className = 'connection-status connected';
+    if (userRegistered) {
+        connectionStatus.style.display = 'block';
+        connectionStatus.textContent = 'Bağlı';
+        connectionStatus.className = 'connection-status connected';
+    }
     
     // Kartları tekrar göster
     if (userRegistered) {
@@ -970,19 +1016,28 @@ socket.on('reconnect', (attemptNumber) => {
 
 socket.on('reconnect_attempt', (attemptNumber) => {
     console.log(`Yeniden bağlanma denemesi: ${attemptNumber}`);
-    connectionStatus.textContent = `Yeniden Bağlanılıyor... (Deneme: ${attemptNumber})`;
+    if (userRegistered) {
+        connectionStatus.style.display = 'block';
+        connectionStatus.textContent = `Yeniden Bağlanılıyor... (Deneme: ${attemptNumber})`;
+    }
 });
 
 socket.on('reconnect_error', (error) => {
     console.log('Yeniden bağlanma hatası:', error);
-    connectionStatus.textContent = 'Bağlantı Hatası';
-    connectionStatus.className = 'connection-status error';
+    if (userRegistered) {
+        connectionStatus.style.display = 'block';
+        connectionStatus.textContent = 'Bağlantı Hatası';
+        connectionStatus.className = 'connection-status error';
+    }
 });
 
 socket.on('reconnect_failed', () => {
     console.log('Yeniden bağlanma başarısız oldu');
-    connectionStatus.textContent = 'Bağlantı Başarısız - Sayfayı Yenileyin';
-    connectionStatus.className = 'connection-status failed';
+    if (userRegistered) {
+        connectionStatus.style.display = 'block';
+        connectionStatus.textContent = 'Bağlantı Başarısız - Sayfayı Yenileyin';
+        connectionStatus.className = 'connection-status failed';
+    }
 });
 
 // Düzenli heartbeat gönder
@@ -1127,4 +1182,129 @@ function showMessageBubble(userName, message) {
         }
     }, 5000); // 5 saniye görünsün
 }
+
+// YouTube videoyu durdurma fonksiyonu
+function stopYoutubeVideo() {
+    // Container'ı HTML'den tamamen kaldır
+    const container = document.getElementById('youtubeContainer');
+    if (container) {
+        container.remove();
+    }
+}
+
+// Konfigürasyon değişikliklerini dinle
+socket.on('configUpdate', ({ room, configs }) => {
+    if (room === currentRoom) {
+        // Konfigürasyonları uygula
+        Object.entries(configs).forEach(([property, value]) => {
+            switch(property) {
+                case 'backgroundColor':
+                    document.body.style.backgroundColor = value;
+                    break;
+                case 'textColor':
+                    document.body.style.color = value;
+                    break;
+                case 'fontSize':
+                    document.body.style.fontSize = value;
+                    break;
+                case 'fontFamily':
+                    document.body.style.fontFamily = value;
+                    break;
+                case 'cardColor':
+                    document.querySelectorAll('.card').forEach(card => {
+                        card.style.backgroundColor = value;
+                        if (!card.classList.contains('selected-card')) {
+                            card.style.borderColor = value;
+                        }
+                    });
+                    break;
+                case 'tableColor':
+                    const table = document.getElementById('table');
+                    table.style.backgroundColor = value;
+                    break;
+                case 'chairColor':
+                    document.querySelectorAll('.chair').forEach(chair => {
+                        chair.style.backgroundColor = value;
+                        if (!chair.classList.contains('selected-chair')) {
+                            chair.style.borderColor = value;
+                        }
+                    });
+                    break;
+                case 'youtubeVideo':
+                    if (value) {
+                        // Eğer container yoksa oluştur
+                        let youtubeContainer = document.getElementById('youtubeContainer');
+                        if (!youtubeContainer) {
+                            youtubeContainer = document.createElement('div');
+                            youtubeContainer.id = 'youtubeContainer';
+                            youtubeContainer.style.position = 'fixed';
+                            youtubeContainer.style.top = '20px';
+                            youtubeContainer.style.right = '20px';
+                            youtubeContainer.style.width = '320px';
+                            youtubeContainer.style.height = '180px';
+                            youtubeContainer.style.zIndex = '1000';
+                            youtubeContainer.style.backgroundColor = 'white';
+                            youtubeContainer.style.borderRadius = '8px';
+                            youtubeContainer.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+                            youtubeContainer.style.overflow = 'hidden';
+                            
+                            // Kapatma butonu ekle
+                            const closeButton = document.createElement('button');
+                            closeButton.innerHTML = '×';
+                            closeButton.style.position = 'absolute';
+                            closeButton.style.right = '5px';
+                            closeButton.style.top = '5px';
+                            closeButton.style.width = '24px';
+                            closeButton.style.height = '24px';
+                            closeButton.style.borderRadius = '50%';
+                            closeButton.style.border = 'none';
+                            closeButton.style.backgroundColor = 'rgba(0,0,0,0.5)';
+                            closeButton.style.color = 'white';
+                            closeButton.style.cursor = 'pointer';
+                            closeButton.style.fontSize = '16px';
+                            closeButton.style.lineHeight = '1';
+                            closeButton.style.padding = '0';
+                            closeButton.onclick = function() {
+                                // Önce komutu gönder, sonra yerel işlem yap
+                                if (currentRoom) {
+                                    socket.emit('chatMessage', { room: currentRoom, message: '/stop' });
+                                }
+                            };
+                            youtubeContainer.appendChild(closeButton);
+                            
+                            // iframe container'ı
+                            const iframeContainer = document.createElement('div');
+                            iframeContainer.style.width = '100%';
+                            iframeContainer.style.height = '100%';
+                            youtubeContainer.appendChild(iframeContainer);
+                            
+                            document.body.appendChild(youtubeContainer);
+                        }
+                        
+                        // YouTube videosunu oynat
+                        const iframeContainer = youtubeContainer.querySelector('div');
+                        const iframe = document.createElement('iframe');
+                        iframe.width = '100%';
+                        iframe.height = '100%';
+                        iframe.src = `https://www.youtube.com/embed/${value}?autoplay=1`;
+                        iframe.frameBorder = '0';
+                        iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+                        iframe.allowFullscreen = true;
+                        
+                        // Eski iframe'i temizle
+                        iframeContainer.innerHTML = '';
+                        iframeContainer.appendChild(iframe);
+                    } else {
+                        alert("youtubeVideo değeri yok");
+                        // Video oynatmayı durdur - DOM'dan kaldır
+                        const container = document.getElementById('youtubeContainer');
+                        if (container) {
+                            container.remove();
+                        }
+                    }
+                    break;
+            }
+        });
+    }
+});
 

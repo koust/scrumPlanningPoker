@@ -11,6 +11,128 @@ const io = new Server(server);
 const rooms = {};
 const revealed = {}; // Oda başına oyların açık olup olmadığını tutar
 let chatMessages = {}; // Store chat messages per room
+const roomConfigs = {}; // Oda konfigürasyonlarını tutacak obje
+
+// Sistem komutları için yardımcı fonksiyonlar
+const systemCommands = {
+    makeit: (room, params) => {
+        if (!roomConfigs[room]) {
+            roomConfigs[room] = {};
+        }
+        
+        const [property, value] = params;
+        if (property && value) {
+            roomConfigs[room][property] = value;
+            return {
+                type: 'config',
+                property,
+                value,
+                message: `${property} değeri ${value} olarak güncellendi.`
+            };
+        }
+        return {
+            type: 'error',
+            message: 'Geçersiz komut formatı. Örnek: /makeit backgroundColor red'
+        };
+    },
+    
+    play: (room, params) => {
+        if (!roomConfigs[room]) {
+            roomConfigs[room] = {};
+        }
+
+        const [url] = params;
+        if (!url) {
+            return {
+                type: 'error',
+                message: 'Geçersiz komut formatı. Örnek: /play https://www.youtube.com/watch?v=VIDEO_ID'
+            };
+        }
+
+        // YouTube URL'sinden video ID'sini çıkar
+        let videoId = '';
+        if (url.includes('youtube.com/watch?v=')) {
+            videoId = url.split('v=')[1].split('&')[0];
+        } else if (url.includes('youtu.be/')) {
+            videoId = url.split('youtu.be/')[1].split('?')[0];
+        } else {
+            return {
+                type: 'error',
+                message: 'Geçersiz YouTube URL\'si. Örnek: https://www.youtube.com/watch?v=VIDEO_ID'
+            };
+        }
+
+        roomConfigs[room].youtubeVideo = videoId;
+        return {
+            type: 'config',
+            property: 'youtubeVideo',
+            value: videoId,
+            message: 'YouTube videosu oynatılıyor...'
+        };
+    },
+
+    stop: (room) => {
+        console.log('Stop komutu (systemCommands) çağrıldı');
+        
+        if (!roomConfigs[room]) {
+            roomConfigs[room] = {};
+        }
+
+        // Her durumda video ID'sini sil
+        delete roomConfigs[room].youtubeVideo;
+        
+        return {
+            type: 'config',
+            property: 'youtubeVideo',
+            value: null,
+            message: 'Video oynatma tüm kullanıcılarda durduruldu.',
+            configs: roomConfigs[room]
+        };
+    },
+    
+    reset: (room) => {
+        if (roomConfigs[room]) {
+            // Varsayılan değerleri ayarla
+            const defaultConfigs = {
+                backgroundColor: '#f8f9fa',
+                textColor: '#212529',
+                fontSize: '16px',
+                fontFamily: 'Arial, sans-serif',
+                cardColor: '#ffffff',
+                tableColor: '#0a5026',
+                chairColor: '#ffffff'
+            };
+            
+            roomConfigs[room] = defaultConfigs;
+            
+            return {
+                type: 'config',
+                message: 'Tüm konfigürasyonlar varsayılan değerlere sıfırlandı.',
+                configs: defaultConfigs
+            };
+        }
+        return {
+            type: 'error',
+            message: 'Sıfırlanacak konfigürasyon bulunamadı.'
+        };
+    },
+    
+    show: (room) => {
+        if (roomConfigs[room] && Object.keys(roomConfigs[room]).length > 0) {
+            const configs = Object.entries(roomConfigs[room])
+                .map(([key, value]) => `${key}: ${value}`)
+                .join('\n');
+            return {
+                type: 'config',
+                message: `Mevcut konfigürasyonlar:\n${configs}`
+            };
+        }
+        return {
+            type: 'error',
+            message: 'Henüz hiç konfigürasyon yapılmamış.'
+        };
+    }
+};
 
 io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
@@ -152,14 +274,81 @@ io.on('connection', (socket) => {
     // Chat functionality
     socket.on('chatMessage', ({ room, message }) => {
         if (!chatMessages[room]) {
-            chatMessages[room] = []; // Ensure chatMessages[room] exists
+            chatMessages[room] = [];
         }
 
         const user = rooms[room]?.[socket.id]?.name || 'Unknown';
-        const chatMessage = { user, message };
+        
+        // Sistem komutu kontrolü
+        if (message.startsWith('/')) {
+            const [command, ...params] = message.slice(1).split(' ');
+            
+            if (systemCommands[command]) {
+                const result = systemCommands[command](room, params);
+                
+                if (result.type === 'config') {
+                    // Konfigürasyon değişikliğini tüm kullanıcılara bildir
+                    io.to(room).emit('configUpdate', {
+                        room,
+                        configs: roomConfigs[room]
+                    });
+                    
+                    // Sistem mesajını gönder
+                    io.to(room).emit('chatMessage', {
+                        user: 'System',
+                        message: result.message
+                    });
+                } else {
+                    // Hata mesajını gönder
+                    socket.emit('chatMessage', {
+                        user: 'System',
+                        message: result.message
+                    });
+                }
+                return;
+            } else if (command === 'stop') {
+                console.log('Stop komutu alındı - tüm clientlarda video durduruluyor');
+                
+                // YouTube video ID'sini sil ve tüm clientlara bildir
+                if (roomConfigs[room]) {
+                    // YouTube ID'sini kontrol etmeden direk siliyoruz
+                    delete roomConfigs[room].youtubeVideo;
+                    
+                    // Tüm kullanıcılara config güncellemesi gönder - youtubeVideo:null 
+                    io.to(room).emit('configUpdate', {
+                        room,
+                        configs: {
+                            youtubeVideo: null
+                        }
+                    });
+                    
+                    // Bildirim mesajı
+                    io.to(room).emit('chatMessage', {
+                        user: 'System',
+                        message: 'Video oynatma tüm kullanıcılarda durduruldu.'
+                    });
+                } else {
+                    // Odanın konfig listesi yoksa oluştur
+                    roomConfigs[room] = {};
+                    io.to(room).emit('configUpdate', {
+                        room,
+                        configs: {
+                            youtubeVideo: null
+                        }
+                    });
+                    
+                    io.to(room).emit('chatMessage', {
+                        user: 'System',
+                        message: 'Video oynatma durduruldu.'
+                    });
+                }
+                return;
+            }
+        }
 
-        chatMessages[room].push(chatMessage); // Store chat message
-        io.to(room).emit('chatMessage', chatMessage); // Broadcast chat message
+        const chatMessage = { user, message };
+        chatMessages[room].push(chatMessage);
+        io.to(room).emit('chatMessage', chatMessage);
     });
 
     // Kullanıcı adı güncelleme
