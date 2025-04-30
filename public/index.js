@@ -636,6 +636,9 @@ function sendMessage() {
                     /makeit chairColor gray - Sandalye rengini değiştir
                     /play [YouTube URL] - YouTube videosu oynat
                     /stop - Video oynatmayı durdur
+                    /game [oyun tipi] - Oyun başlat (oyun tipi: agario, snake, tetris)
+                    /game mini - Tarayıcı içinde mini Agario oyunu
+                    /stopgame - Oyunu durdur
                     /reset - Tüm konfigürasyonları sıfırla
                     /show - Mevcut konfigürasyonları göster
                 `;
@@ -649,6 +652,11 @@ function sendMessage() {
             } else if (command === 'stop') {
                 // /stop komutu için sadece sunucuya komut gönder
                 // Yerel işlem yapma, sunucu tüm clientlara bildirecek
+                socket.emit('chatMessage', { room: currentRoom, message });
+                chatInput.value = '';
+                return;
+            } else if (command === 'stopgame') {
+                // /stopgame komutu için sadece sunucuya komut gönder
                 socket.emit('chatMessage', { room: currentRoom, message });
                 chatInput.value = '';
                 return;
@@ -759,7 +767,7 @@ socket.on('updateVotes', ({ votes, average, revealed }) => {
     const table = document.getElementById('table');
     const lastVoteResults = document.getElementById('lastVoteResults');
     const scrumMasterChairs = document.querySelectorAll('.scrumMaster-chair');
-
+    const averageDisplay = document.getElementById('averageDisplay');
     // Tüm sandalyeleri temizle
     for (let i = 0; i < table.children.length; i++) {
         table.children[i].innerText = '';
@@ -777,6 +785,7 @@ socket.on('updateVotes', ({ votes, average, revealed }) => {
     // Developer ve Scrum Master'ları ayır
     const developers = votes.filter(user => user.role === 'developer');
     const scrumMasters = votes.filter(user => user.role === 'scrumMaster');
+
 
     // Developer'ları masaya yerleştir
     developers.forEach((user, index) => {
@@ -922,6 +931,8 @@ function updateLastVotesPanel(votes, average) {
     if (developerVotes.length > 0) {
         const devAverage = Math.round((developerVotes.reduce((sum, vote) => sum + vote, 0) / developerVotes.length) * 10) / 10;
         averageElement.innerHTML = `<strong>Ortalama puan:</strong> ${devAverage}`;
+
+         averageDisplay.innerHTML = `<strong>Ortalama puan:</strong> ${devAverage}`;
     } else {
         averageElement.innerHTML = '<strong>Ortalama puan:</strong> Henüz developer oyu yok';
     }
@@ -1186,16 +1197,251 @@ function showMessageBubble(userName, message) {
 // YouTube videoyu durdurma fonksiyonu
 function stopYoutubeVideo() {
     // Container'ı HTML'den tamamen kaldır
+    alert('stopYoutubeVideo çağrıldı');
     const container = document.getElementById('youtubeContainer');
-    if (container) {
-        container.remove();
+    if (container && container.parentNode) {
+        container.parentNode.removeChild(container);
     }
+}
+
+// Basit Agario benzeri oyun oluşturma
+function createAgarioGame() {
+    // Eğer hali hazırda varsa kaldır
+    const existingGame = document.getElementById('simpleAgarioGame');
+    if (existingGame) {
+        existingGame.remove();
+    }
+    
+    // Oyun container'ı
+    const gameContainer = document.createElement('div');
+    gameContainer.id = 'simpleAgarioGame';
+    gameContainer.style.position = 'fixed';
+    gameContainer.style.top = '50%';
+    gameContainer.style.left = '50%';
+    gameContainer.style.width = '600px';
+    gameContainer.style.height = '400px';
+    gameContainer.style.transform = 'translate(-50%, -50%)';
+    gameContainer.style.zIndex = '1000';
+    gameContainer.style.backgroundColor = '#F8F9FA';
+    gameContainer.style.borderRadius = '10px';
+    gameContainer.style.boxShadow = '0 0 20px rgba(0,0,0,0.5)';
+    gameContainer.style.overflow = 'hidden';
+    gameContainer.style.display = 'flex';
+    gameContainer.style.flexDirection = 'column';
+    
+    // Başlık bar
+    const titleBar = document.createElement('div');
+    titleBar.style.width = '100%';
+    titleBar.style.height = '40px';
+    titleBar.style.backgroundColor = '#4361ee';
+    titleBar.style.color = 'white';
+    titleBar.style.display = 'flex';
+    titleBar.style.alignItems = 'center';
+    titleBar.style.justifyContent = 'space-between';
+    titleBar.style.padding = '0 15px';
+    titleBar.style.boxSizing = 'border-box';
+    titleBar.style.borderTopLeftRadius = '10px';
+    titleBar.style.borderTopRightRadius = '10px';
+    gameContainer.appendChild(titleBar);
+    
+    // Oyun başlığı
+    const gameTitle = document.createElement('span');
+    gameTitle.textContent = 'Mini Agario';
+    gameTitle.style.fontWeight = 'bold';
+    gameTitle.style.fontSize = '16px';
+    titleBar.appendChild(gameTitle);
+    
+    // Skorlar
+    const scoreDisplay = document.createElement('span');
+    scoreDisplay.id = 'gameScore';
+    scoreDisplay.textContent = 'Skor: 0';
+    scoreDisplay.style.fontSize = '14px';
+    titleBar.appendChild(scoreDisplay);
+    
+    // Kapatma butonu
+    const closeButton = document.createElement('button');
+    closeButton.innerHTML = '×';
+    closeButton.style.width = '24px';
+    closeButton.style.height = '24px';
+    closeButton.style.borderRadius = '50%';
+    closeButton.style.border = 'none';
+    closeButton.style.backgroundColor = 'rgba(255,255,255,0.3)';
+    closeButton.style.color = 'white';
+    closeButton.style.cursor = 'pointer';
+    closeButton.style.fontSize = '18px';
+    closeButton.style.lineHeight = '1';
+    closeButton.style.padding = '0';
+    closeButton.style.marginLeft = '15px';
+    closeButton.style.display = 'flex';
+    closeButton.style.alignItems = 'center';
+    closeButton.style.justifyContent = 'center';
+    closeButton.onclick = function() {
+        // Oyunu kapat - güvenilir şekilde
+        const gameEl = document.getElementById('simpleAgarioGame');
+        if (gameEl) {
+            try {
+                gameEl.remove();
+            } catch (e) {
+                if (gameEl.parentNode) {
+                    gameEl.parentNode.removeChild(gameEl);
+                } else {
+                    gameEl.style.display = 'none';
+                }
+            }
+        }
+        
+        // Ayrıca serverda stopgame komutunu çalıştır
+        if (currentRoom) {
+            socket.emit('chatMessage', { room: currentRoom, message: '/stopgame' });
+        }
+    };
+    titleBar.appendChild(closeButton);
+    
+    // Oyun alanı
+    const gameCanvas = document.createElement('canvas');
+    gameCanvas.id = 'gameCanvas';
+    gameCanvas.width = 600;
+    gameCanvas.height = 360;
+    gameCanvas.style.backgroundColor = 'white';
+    gameContainer.appendChild(gameCanvas);
+    
+    document.body.appendChild(gameContainer);
+    
+    // Oyun kodu
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    let score = 0;
+    
+    // Oyuncu
+    const player = {
+        x: canvas.width / 2,
+        y: canvas.height / 2,
+        radius: 20,
+        color: '#4361ee',
+        dx: 0,
+        dy: 0,
+        speed: 3
+    };
+    
+    // Hedefler
+    let targets = [];
+    
+    // Hedef oluştur
+    function createTarget() {
+        const radius = Math.random() * 10 + 5;
+        const target = {
+            x: Math.random() * (canvas.width - radius * 2) + radius,
+            y: Math.random() * (canvas.height - radius * 2) + radius,
+            radius: radius,
+            color: getRandomColor()
+        };
+        targets.push(target);
+    }
+    
+    // Rastgele renk
+    function getRandomColor() {
+        const colors = ['#FF5733', '#33FF57', '#3357FF', '#F333FF', '#FF3399'];
+        return colors[Math.floor(Math.random() * colors.length)];
+    }
+    
+    // İlk hedefleri oluştur
+    for (let i = 0; i < 10; i++) {
+        createTarget();
+    }
+    
+    // Oyun döngüsü
+    function gameLoop() {
+        // Ekranı temizle
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Hedefleri çiz
+        targets.forEach(target => {
+            ctx.beginPath();
+            ctx.arc(target.x, target.y, target.radius, 0, Math.PI * 2);
+            ctx.fillStyle = target.color;
+            ctx.fill();
+            ctx.closePath();
+        });
+        
+        // Oyuncuyu hareket ettir
+        player.x += player.dx;
+        player.y += player.dy;
+        
+        // Sınırlar içinde tut
+        if (player.x < player.radius) {
+            player.x = player.radius;
+        }
+        if (player.x > canvas.width - player.radius) {
+            player.x = canvas.width - player.radius;
+        }
+        if (player.y < player.radius) {
+            player.y = player.radius;
+        }
+        if (player.y > canvas.height - player.radius) {
+            player.y = canvas.height - player.radius;
+        }
+        
+        // Oyuncuyu çiz
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+        ctx.fillStyle = player.color;
+        ctx.fill();
+        ctx.closePath();
+        
+        // Çarpışma kontrolü
+        targets = targets.filter(target => {
+            const dx = player.x - target.x;
+            const dy = player.y - target.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < player.radius + target.radius && player.radius > target.radius) {
+                // Oyuncu büyüsün
+                player.radius += target.radius / 10;
+                // Skor artsın
+                score += Math.floor(target.radius);
+                document.getElementById('gameScore').textContent = 'Skor: ' + score;
+                // Yeni hedef oluştur
+                createTarget();
+                return false;
+            } else if (distance < player.radius + target.radius && player.radius < target.radius) {
+                // Oyun bitti
+                alert('Oyun Bitti! Skorunuz: ' + score);
+                gameContainer.remove();
+                return false;
+            }
+            return true;
+        });
+        
+        // Devam et
+        if (document.getElementById('simpleAgarioGame')) {
+            requestAnimationFrame(gameLoop);
+        }
+    }
+    
+    // Fare kontrolü
+    canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        
+        // Oyuncuyu fareye doğru hareket ettir
+        const dx = mouseX - player.x;
+        const dy = mouseY - player.y;
+        const angle = Math.atan2(dy, dx);
+        
+        player.dx = Math.cos(angle) * player.speed;
+        player.dy = Math.sin(angle) * player.speed;
+    });
+    
+    // Oyunu başlat
+    gameLoop();
 }
 
 // Konfigürasyon değişikliklerini dinle
 socket.on('configUpdate', ({ room, configs }) => {
     if (room === currentRoom) {
         // Konfigürasyonları uygula
+        console.log('configUpdate çağrıldı', configs);
         Object.entries(configs).forEach(([property, value]) => {
             switch(property) {
                 case 'backgroundColor':
@@ -1231,7 +1477,8 @@ socket.on('configUpdate', ({ room, configs }) => {
                     });
                     break;
                 case 'youtubeVideo':
-                    if (value) {
+                    alert('youtubeVideo çağrıldı',value );
+                    if (value !== "stop") {
                         // Eğer container yoksa oluştur
                         let youtubeContainer = document.getElementById('youtubeContainer');
                         if (!youtubeContainer) {
@@ -1266,9 +1513,7 @@ socket.on('configUpdate', ({ room, configs }) => {
                             closeButton.style.padding = '0';
                             closeButton.onclick = function() {
                                 // Önce komutu gönder, sonra yerel işlem yap
-                                if (currentRoom) {
-                                    socket.emit('chatMessage', { room: currentRoom, message: '/stop' });
-                                }
+                                stopYoutubeVideo()
                             };
                             youtubeContainer.appendChild(closeButton);
                             
@@ -1295,12 +1540,137 @@ socket.on('configUpdate', ({ room, configs }) => {
                         iframeContainer.innerHTML = '';
                         iframeContainer.appendChild(iframe);
                     } else {
-                        alert("youtubeVideo değeri yok");
                         // Video oynatmayı durdur - DOM'dan kaldır
-                        const container = document.getElementById('youtubeContainer');
-                        if (container) {
-                            container.remove();
+                        stopYoutubeVideo();
+                    }
+                    break;
+                case 'gameFrame':
+                    if (value) {
+                        // Eğer container yoksa oluştur
+                        let gameContainer = document.getElementById('gameContainer');
+                        if (!gameContainer) {
+                            gameContainer = document.createElement('div');
+                            gameContainer.id = 'gameContainer';
+                            gameContainer.style.position = 'fixed';
+                            gameContainer.style.top = '50%';
+                            gameContainer.style.left = '50%';
+                            gameContainer.style.width = '800px';
+                            gameContainer.style.height = '600px';
+                            gameContainer.style.transform = 'translate(-50%, -50%)';
+                            gameContainer.style.zIndex = '1000';
+                            gameContainer.style.backgroundColor = 'white';
+                            gameContainer.style.borderRadius = '10px';
+                            gameContainer.style.boxShadow = '0 0 20px rgba(0,0,0,0.5)';
+                            gameContainer.style.overflow = 'hidden';
+                            
+                            // Başlık bar
+                            const titleBar = document.createElement('div');
+                            titleBar.style.width = '100%';
+                            titleBar.style.height = '40px';
+                            titleBar.style.backgroundColor = '#4361ee';
+                            titleBar.style.color = 'white';
+                            titleBar.style.display = 'flex';
+                            titleBar.style.alignItems = 'center';
+                            titleBar.style.justifyContent = 'space-between';
+                            titleBar.style.padding = '0 15px';
+                            titleBar.style.boxSizing = 'border-box';
+                            titleBar.style.borderTopLeftRadius = '10px';
+                            titleBar.style.borderTopRightRadius = '10px';
+                            gameContainer.appendChild(titleBar);
+                            
+                            // Oyun başlığı
+                            const gameTitle = document.createElement('span');
+                            gameTitle.id = 'gameTitle';
+                            gameTitle.style.fontWeight = 'bold';
+                            gameTitle.style.fontSize = '16px';
+                            titleBar.appendChild(gameTitle);
+                            
+                            // Kapatma butonu
+                            const closeButton = document.createElement('button');
+                            closeButton.innerHTML = '×';
+                            closeButton.style.width = '24px';
+                            closeButton.style.height = '24px';
+                            closeButton.style.borderRadius = '50%';
+                            closeButton.style.border = 'none';
+                            closeButton.style.backgroundColor = 'rgba(255,255,255,0.3)';
+                            closeButton.style.color = 'white';
+                            closeButton.style.cursor = 'pointer';
+                            closeButton.style.fontSize = '18px';
+                            closeButton.style.lineHeight = '1';
+                            closeButton.style.padding = '0';
+                            closeButton.style.display = 'flex';
+                            closeButton.style.alignItems = 'center';
+                            closeButton.style.justifyContent = 'center';
+                            closeButton.onclick = function() {
+                                // Kapatma komutu gönder
+                                if (currentRoom) {
+                                    socket.emit('chatMessage', { room: currentRoom, message: '/stopgame' });
+                                }
+                            };
+                            titleBar.appendChild(closeButton);
+                            
+                            // iframe için div container
+                            const iframeContainer = document.createElement('div');
+                            iframeContainer.id = 'gameIframeContainer';
+                            iframeContainer.style.width = '100%';
+                            iframeContainer.style.height = 'calc(100% - 40px)';
+                            gameContainer.appendChild(iframeContainer);
+                            
+                            document.body.appendChild(gameContainer);
                         }
+                        
+                        // Oyun başlığını güncelle
+                        const gameTitle = document.getElementById('gameTitle');
+                        if (gameTitle) {
+                            gameTitle.textContent = value.name || 'Oyun';
+                        }
+                        
+                        // Oyun iframe'ini ekle
+                        const iframeContainer = document.getElementById('gameIframeContainer');
+                        if (iframeContainer) {
+                            const iframe = document.createElement('iframe');
+                            iframe.width = '100%';
+                            iframe.height = '100%';
+                            iframe.src = value.url;
+                            iframe.frameBorder = '0';
+                            iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+                            iframe.allowFullscreen = true;
+                            
+                            // Mevcut içeriği temizle
+                            iframeContainer.innerHTML = '';
+                            iframeContainer.appendChild(iframe);
+                        }
+                    } else {
+                        // Oyun container'ını kaldır - daha güvenilir yöntem
+                        const container = document.getElementById('gameContainer');
+                        if (container) {
+                            // İlk yöntem: remove() kullan
+                            try {
+                                container.remove();
+                            } catch (e) {
+                                // İkinci yöntem: parentNode.removeChild() kullan
+                                if (container.parentNode) {
+                                    container.parentNode.removeChild(container);
+                                } else {
+                                    // Son çare: display:none ile gizle
+                                    container.style.display = 'none';
+                                }
+                            }
+                            
+                            // Ek önlem olarak oyun iframe içeriğini temizle
+                            const iframeContainer = document.getElementById('gameIframeContainer');
+                            if (iframeContainer) {
+                                iframeContainer.innerHTML = '';
+                            }
+                        }
+                    }
+                    break;
+                case 'miniGame':
+                    if (value === 'agario') {
+                        // Mini Agario oyununu başlat
+                        createAgarioGame();
+                    } else {
+                        // Diğer mini oyunlar eklenebilir
                     }
                     break;
             }

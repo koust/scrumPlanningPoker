@@ -36,6 +36,73 @@ const systemCommands = {
         };
     },
     
+    game: (room, params) => {
+        if (!roomConfigs[room]) {
+            roomConfigs[room] = {};
+        }
+
+        const [gameType] = params;
+        
+        // Oyun tipini kontrol et
+        let gameUrl = '';
+        let gameName = '';
+        
+        if (!gameType || gameType === 'agario') {
+            // Varsayılan oyun: agario benzeri
+            gameUrl = 'https://agar.io/';
+            gameName = 'Agar.io';
+        } else if (gameType === 'snake') {
+            gameUrl = 'https://slither.io/';
+            gameName = 'Slither.io';
+        } else if (gameType === 'tetris') {
+            gameUrl = 'https://tetris.com/play-tetris';
+            gameName = 'Tetris';
+        } else if (gameType === 'mini') {
+            return {
+                type: 'config',
+                property: 'miniGame',
+                value: 'agario',
+                message: 'Mini Agario oyunu başlatılıyor...'
+            };
+        } else {
+            return {
+                type: 'error',
+                message: 'Geçersiz oyun tipi. Kullanılabilir tipler: agario, snake, tetris, mini'
+            };
+        }
+
+        roomConfigs[room].gameFrame = {
+            url: gameUrl,
+            name: gameName
+        };
+        
+        return {
+            type: 'config',
+            property: 'gameFrame',
+            value: roomConfigs[room].gameFrame,
+            message: `${gameName} oyunu başlatılıyor...`
+        };
+    },
+    
+    stopgame: (room) => {
+        if (!roomConfigs[room]) {
+            roomConfigs[room] = {};
+        }
+
+        // Hem gameFrame hem de miniGame'i temizle
+        const gameName = roomConfigs[room].gameFrame?.name || roomConfigs[room].miniGame || 'Oyun';
+        delete roomConfigs[room].gameFrame;
+        delete roomConfigs[room].miniGame;
+        
+        return {
+            type: 'config',
+            property: 'gameFrame',
+            value: null,
+            message: `${gameName} oyunu durduruldu.`,
+            configs: roomConfigs[room]
+        };
+    },
+    
     play: (room, params) => {
         if (!roomConfigs[room]) {
             roomConfigs[room] = {};
@@ -84,7 +151,7 @@ const systemCommands = {
         return {
             type: 'config',
             property: 'youtubeVideo',
-            value: null,
+            value: 'stop',
             message: 'Video oynatma tüm kullanıcılarda durduruldu.',
             configs: roomConfigs[room]
         };
@@ -237,7 +304,7 @@ io.on('connection', (socket) => {
                     io.to(room).emit('updateVotes', { votes: Object.values(rooms[room]), average: 0, revealed: false });
                     io.to(room).emit('chatMessage', { user: 'System', message: `Yeni oylama başlatıldı.` });
                 }
-            }, 5000);
+            }, 500);
         }
     });
 
@@ -318,7 +385,7 @@ io.on('connection', (socket) => {
                     io.to(room).emit('configUpdate', {
                         room,
                         configs: {
-                            youtubeVideo: null
+                            youtubeVideo: "stop"
                         }
                     });
                     
@@ -333,13 +400,53 @@ io.on('connection', (socket) => {
                     io.to(room).emit('configUpdate', {
                         room,
                         configs: {
-                            youtubeVideo: null
+                            youtubeVideo: "stop"
                         }
                     });
                     
                     io.to(room).emit('chatMessage', {
                         user: 'System',
                         message: 'Video oynatma durduruldu.'
+                    });
+                }
+                return;
+            } else if (command === 'stopgame') {
+                console.log('Stopgame komutu alındı - tüm clientlarda oyun durduruluyor');
+                
+                // Oyun frame'ini sil ve tüm clientlara bildir
+                if (roomConfigs[room]) {
+                    const gameName = roomConfigs[room].gameFrame?.name || roomConfigs[room].miniGame || 'Oyun';
+                    delete roomConfigs[room].gameFrame;
+                    delete roomConfigs[room].miniGame; // Mini oyun özelliğini de sil
+                    
+                    // Tüm kullanıcılara config güncellemesi gönder
+                    io.to(room).emit('configUpdate', {
+                        room,
+                        configs: {
+                            gameFrame: null,
+                            miniGame: null
+                        }
+                    });
+                    
+                    // Bildirim mesajı
+                    io.to(room).emit('chatMessage', {
+                        user: 'System',
+                        message: `${gameName} oyunu tüm kullanıcılarda durduruldu.`
+                    });
+                } else {
+                    // Odanın konfig listesi yoksa oluştur
+                    roomConfigs[room] = {};
+                    io.to(room).emit('configUpdate', {
+                        room,
+                        configs: {
+                            gameFrame: null,
+                            miniGame: null
+                        }
+                    });
+                    
+                    io.to(room).emit('chatMessage', {
+                        user: 'System',
+                        message: 'Oyun durduruldu.'
                     });
                 }
                 return;
