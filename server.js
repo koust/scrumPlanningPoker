@@ -304,7 +304,7 @@ io.on('connection', (socket) => {
                     io.to(room).emit('updateVotes', { votes: Object.values(rooms[room]), average: 0, revealed: false });
                     io.to(room).emit('chatMessage', { user: 'System', message: `Yeni oylama başlatıldı.` });
                 }
-            }, 500);
+            }, 1000);
         }
     });
 
@@ -355,10 +355,28 @@ io.on('connection', (socket) => {
                 
                 if (result.type === 'config') {
                     // Konfigürasyon değişikliğini tüm kullanıcılara bildir
-                    io.to(room).emit('configUpdate', {
-                        room,
-                        configs: roomConfigs[room]
-                    });
+                    // Eğer stop komutu ise direkt olarak stop değerini gönder
+                    if (command === 'stop') {
+                        io.to(room).emit('configUpdate', {
+                            room,
+                            configs: {
+                                youtubeVideo: "stop"
+                            }
+                        });
+                    } else if (command === 'stopgame') {
+                        io.to(room).emit('configUpdate', {
+                            room,
+                            configs: {
+                                gameFrame: null,
+                                miniGame: null
+                            }
+                        });
+                    } else {
+                        io.to(room).emit('configUpdate', {
+                            room,
+                            configs: result.configs || roomConfigs[room]
+                        });
+                    }
                     
                     // Sistem mesajını gönder
                     io.to(room).emit('chatMessage', {
@@ -370,83 +388,6 @@ io.on('connection', (socket) => {
                     socket.emit('chatMessage', {
                         user: 'System',
                         message: result.message
-                    });
-                }
-                return;
-            } else if (command === 'stop') {
-                console.log('Stop komutu alındı - tüm clientlarda video durduruluyor');
-                
-                // YouTube video ID'sini sil ve tüm clientlara bildir
-                if (roomConfigs[room]) {
-                    // YouTube ID'sini kontrol etmeden direk siliyoruz
-                    delete roomConfigs[room].youtubeVideo;
-                    
-                    // Tüm kullanıcılara config güncellemesi gönder - youtubeVideo:null 
-                    io.to(room).emit('configUpdate', {
-                        room,
-                        configs: {
-                            youtubeVideo: "stop"
-                        }
-                    });
-                    
-                    // Bildirim mesajı
-                    io.to(room).emit('chatMessage', {
-                        user: 'System',
-                        message: 'Video oynatma tüm kullanıcılarda durduruldu.'
-                    });
-                } else {
-                    // Odanın konfig listesi yoksa oluştur
-                    roomConfigs[room] = {};
-                    io.to(room).emit('configUpdate', {
-                        room,
-                        configs: {
-                            youtubeVideo: "stop"
-                        }
-                    });
-                    
-                    io.to(room).emit('chatMessage', {
-                        user: 'System',
-                        message: 'Video oynatma durduruldu.'
-                    });
-                }
-                return;
-            } else if (command === 'stopgame') {
-                console.log('Stopgame komutu alındı - tüm clientlarda oyun durduruluyor');
-                
-                // Oyun frame'ini sil ve tüm clientlara bildir
-                if (roomConfigs[room]) {
-                    const gameName = roomConfigs[room].gameFrame?.name || roomConfigs[room].miniGame || 'Oyun';
-                    delete roomConfigs[room].gameFrame;
-                    delete roomConfigs[room].miniGame; // Mini oyun özelliğini de sil
-                    
-                    // Tüm kullanıcılara config güncellemesi gönder
-                    io.to(room).emit('configUpdate', {
-                        room,
-                        configs: {
-                            gameFrame: null,
-                            miniGame: null
-                        }
-                    });
-                    
-                    // Bildirim mesajı
-                    io.to(room).emit('chatMessage', {
-                        user: 'System',
-                        message: `${gameName} oyunu tüm kullanıcılarda durduruldu.`
-                    });
-                } else {
-                    // Odanın konfig listesi yoksa oluştur
-                    roomConfigs[room] = {};
-                    io.to(room).emit('configUpdate', {
-                        room,
-                        configs: {
-                            gameFrame: null,
-                            miniGame: null
-                        }
-                    });
-                    
-                    io.to(room).emit('chatMessage', {
-                        user: 'System',
-                        message: 'Oyun durduruldu.'
                     });
                 }
                 return;

@@ -1294,6 +1294,79 @@
             100% { transform: scale(1); }
         }
 
+        /* Ödül ve Kupa Stilleri */
+        .award-container {
+            position: absolute;
+            bottom: 10px;
+            left: 120px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 10;
+            background-color: rgba(255, 255, 255, 0.85);
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .trophy-icon {
+            color: #FFD700; /* Altın rengi */
+            font-size: 32px;
+            margin-bottom: 5px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .trophy-count {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-top: -5px;
+        }
+        
+        .award-badges {
+            display: flex;
+            margin-top: 5px;
+            gap: 8px;
+        }
+        
+        .award-badge {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 16px;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .award-badge.gold {
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+        }
+        
+        .award-badge.silver {
+            background: linear-gradient(45deg, #C0C0C0, #A9A9A9);
+        }
+        
+        .award-title {
+            font-size: 10px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Mobil görünüm için düzenleme */
+        @media (max-width: 768px) {
+            .award-container {
+                transform: scale(0.85);
+                transform-origin: bottom left;
+            }
+        }
+
         /* Mola Butonu Stili */
         #breakBtn {
             position: fixed;
@@ -1643,6 +1716,17 @@
             <!-- Kullanıcılar masa etrafında dinamik olarak yerleştirilecek -->
         </div>
 
+        <!-- Ödül ve Kupa Simgesi -->
+        <div class="award-container">
+            <div class="award-title">Ödüllerimiz</div>
+            <div class="trophy-icon">
+                <i class="fas fa-trophy"></i>
+            </div>
+            <div class="trophy-count">Bravo</div>
+            <div class="award-badges">
+                <div class="award-badge gold" title="Şirket İnovasyon Ödülü">1</div>
+            </div>
+        </div>
 
         <!-- Galatasaray bayrağı -->
         <div class="gs-logo"></div>

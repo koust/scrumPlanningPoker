@@ -1197,10 +1197,14 @@ function showMessageBubble(userName, message) {
 // YouTube videoyu durdurma fonksiyonu
 function stopYoutubeVideo() {
     // Container'ı HTML'den tamamen kaldır
-    alert('stopYoutubeVideo çağrıldı');
     const container = document.getElementById('youtubeContainer');
     if (container && container.parentNode) {
         container.parentNode.removeChild(container);
+    }
+    
+    // Ayrıca sunucuya komut göndererek herkesin videoyu durdurduğundan emin olalım
+    if (currentRoom) {
+        socket.emit('chatMessage', { room: currentRoom, message: '/stop' });
     }
 }
 
@@ -1477,7 +1481,7 @@ socket.on('configUpdate', ({ room, configs }) => {
                     });
                     break;
                 case 'youtubeVideo':
-                    alert('youtubeVideo çağrıldı',value );
+                    console.log('YouTube video değeri:', value);
                     if (value !== "stop") {
                         // Eğer container yoksa oluştur
                         let youtubeContainer = document.getElementById('youtubeContainer');
@@ -1513,7 +1517,7 @@ socket.on('configUpdate', ({ room, configs }) => {
                             closeButton.style.padding = '0';
                             closeButton.onclick = function() {
                                 // Önce komutu gönder, sonra yerel işlem yap
-                                stopYoutubeVideo()
+                                stopYoutubeVideo();
                             };
                             youtubeContainer.appendChild(closeButton);
                             
@@ -1540,8 +1544,15 @@ socket.on('configUpdate', ({ room, configs }) => {
                         iframeContainer.innerHTML = '';
                         iframeContainer.appendChild(iframe);
                     } else {
+                        console.log('Video durdurma komutu alındı, stopYoutubeVideo() çağrılıyor');
                         // Video oynatmayı durdur - DOM'dan kaldır
-                        stopYoutubeVideo();
+                        const youtubeContainer = document.getElementById('youtubeContainer');
+                        if (youtubeContainer) {
+                            console.log('YouTube container bulundu, kaldırılıyor');
+                            document.body.removeChild(youtubeContainer);
+                        } else {
+                            console.log('YouTube container bulunamadı');
+                        }
                     }
                     break;
                 case 'gameFrame':
